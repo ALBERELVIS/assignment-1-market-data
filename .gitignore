@@ -205,3 +205,30 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# === Extra rules for my assigment ===
+# Ignore environment and secret files
+.env
+.env.*
+
+# Ignore local data and results
+data/
+data_raw/
+output/
+results/
+*.csv
+*.db
+*.sqlite
+
+# Ignore Colab checkpoints
+.ipynb_checkpoints/
+*.ipynb
+
+# Ignore IDE/editor folders
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
