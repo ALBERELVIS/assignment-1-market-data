@@ -1,55 +1,48 @@
 """
 extractor.py
 -------------
-This module fetches and standardizes market data (stocks and indices)
-using the Yahoo Finance API through yfinance.
+Module for downloading and standardizing market data from online APIs.
 
-Author: ALBERELVIS
+Currently uses the yfinance library (Yahoo Finance).
 """
 
 import yfinance as yf
 import pandas as pd
-from dataclasses import dataclass
-from typing import List, Dict, Union
 
-
-@dataclass
-class MarketData:
-    """Standard structure for historical price series."""
-    ticker: str
-    data: pd.DataFrame
-
-    def __post_init__(self):
-        # Standardize column names
-        self.data.columns = [c.lower().replace(" ", "_") for c in self.data.columns]
-        # Keep only the key columns
-        self.data = self.data[["open", "high", "low", "close", "volume"]]
-        # Sort by date just in case
-        self.data = self.data.sort_index()
-
-
-def download_price_series(
-    tickers: Union[str, List[str]],
-    start: str = "2020-01-01",
-    end: str = None,
-    interval: str = "1d"
-) -> Dict[str, MarketData]:
+def download_price_series(tickers, start="2020-01-01", end=None):
     """
-    Download historical data for one or multiple tickers.
+    Download historical price data for multiple tickers from Yahoo Finance.
 
-    Returns a dictionary: {ticker: MarketData}
+    Parameters
+    ----------
+    tickers : list of str
+        List of ticker symbols (e.g., ["AAPL", "MSFT", "^GSPC"])
+    start : str
+        Start date in 'YYYY-MM-DD' format
+    end : str, optional
+        End date (default: today)
+
+    Returns
+    -------
+    dict
+        Dictionary where each key is a ticker symbol and each value is a DataFrame
+        with standardized columns: ["open", "high", "low", "close", "volume"]
     """
-    if isinstance(tickers, str):
-        tickers = [tickers]
-
-    result = {}
-    for t in tickers:
-        print(f"⬇️ Downloading data for {t}...")
-        df = yf.download(t, start=start, end=end, interval=interval, progress=False)
-        if not df.empty:
-            result[t] = MarketData(ticker=t, data=df)
-            print(f"✅ {t} data downloaded — {len(df)} rows.")
-        else:
-            print(f"⚠️ Warning: No data found for {t}")
-    return result
-
+    all_data = {}
+    for ticker in tickers:
+        print(f"⬇️ Downloading data for {ticker}...")
+        data = yf.download(ticker, start=start, end=end, progress=False)
+        if data.empty:
+            print(f"⚠️ No data found for {ticker}")
+            continue
+        data = data.rename(columns={
+            "Open": "open",
+            "High": "high",
+            "Low": "low",
+            "Close": "close",
+            "Adj Close": "adj_close",
+            "Volume": "volume"
+        })
+        all_data[ticker] = data[["open", "high", "low", "close", "volume"]]
+        print(f"✅ {ticker} data downloaded — {len(data)} rows.")
+    return all_data
