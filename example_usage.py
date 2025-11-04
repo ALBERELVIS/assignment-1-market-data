@@ -3,6 +3,41 @@ Ejemplos de uso del sistema de análisis bursátil
 Este archivo contiene múltiples ejemplos para diferentes casos de uso
 """
 
+import sys
+import subprocess
+from pathlib import Path
+
+
+def ensure_dependencies():
+    """Verifica e instala dependencias automáticamente si faltan"""
+    required_packages = ['pandas', 'numpy', 'yfinance', 'matplotlib', 'seaborn', 'scipy']
+    missing = []
+    
+    for package in required_packages:
+        try:
+            __import__(package)
+        except ImportError:
+            missing.append(package)
+    
+    if missing:
+        print("Instalando dependencias faltantes...")
+        requirements_file = Path(__file__).parent / "requirements.txt"
+        if requirements_file.exists():
+            subprocess.check_call([
+                sys.executable, "-m", "pip", "install", "-r", str(requirements_file)
+            ])
+            print("✅ Dependencias instaladas")
+        else:
+            print("❌ No se encontró requirements.txt")
+            return False
+    
+    return True
+
+
+# Verificar dependencias antes de importar
+if not ensure_dependencies():
+    sys.exit(1)
+
 from src.data_extractor import DataExtractor
 from src.price_series import PriceSeries
 from src.portfolio import Portfolio
