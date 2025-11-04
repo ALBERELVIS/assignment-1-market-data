@@ -1,0 +1,317 @@
+═══════════════════════════════════════════════════════════════════════════
+                    ESTRUCTURA DEL PROYECTO
+═══════════════════════════════════════════════════════════════════════════
+
+Este documento describe la estructura, dependencias y jerarquías del proyecto.
+
+───────────────────────────────────────────────────────────────────────────
+1. ESTRUCTURA DE CARPETAS Y ARCHIVOS
+───────────────────────────────────────────────────────────────────────────
+
+.
+├── src/                           # Núcleo del proyecto
+│   ├── __init__.py               # Inicialización del módulo
+│   ├── data_extractor.py         # Módulo de extracción de datos
+│   ├── price_series.py            # DataClass para series de precios
+│   ├── portfolio.py              # Clase Portfolio
+│   ├── data_cleaning.py          # Limpieza y preprocesado
+│   └── main.py                   # Script principal
+│
+├── requirements.txt              # Dependencias del proyecto
+├── .gitignore                    # Archivos ignorados por Git
+├── README.md                     # Documentación principal
+├── example_usage.py               # Ejemplos de uso
+├── ESTRUCTURA_PROYECTO.txt       # Este archivo
+└── INSTRUCCIONES_GITHUB.md       # Guía para subir a GitHub
+
+───────────────────────────────────────────────────────────────────────────
+2. JERARQUÍA DE CLASES Y DEPENDENCIAS
+───────────────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    DataExtractor                                │
+│  (Extrae datos de APIs y estandariza el formato)               │
+│                                                                 │
+│  Métodos principales:                                          │
+│  - download_historical_prices()                                │
+│  - download_multiple_series()                                  │
+│  - download_index_data()                                       │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                            │ retorna
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              StandardizedPriceData                              │
+│  (Formato estandarizado independiente de la fuente)            │
+│                                                                 │
+│  Atributos:                                                     │
+│  - symbol: str                                                  │
+│  - date: pd.DatetimeIndex                                       │
+│  - open, high, low, close, volume: pd.Series                   │
+│  - source: str                                                  │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                            │ se convierte en
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    PriceSeries                                  │
+│  (DataClass con métodos estadísticos automáticos)              │
+│                                                                 │
+│  Estadísticas automáticas (calculadas en __post_init__):       │
+│  - mean_price, std_price                                       │
+│  - mean_volume, std_volume                                     │
+│                                                                 │
+│  Métodos estadísticos:                                         │
+│  - returns() → retornos (simple o log)                         │
+│  - volatility() → volatilidad anualizada                       │
+│  - sharpe_ratio() → ratio de Sharpe                            │
+│  - max_drawdown() → máximo drawdown                            │
+│  - correlation_with() → correlación con otra serie            │
+│  - get_summary_stats() → diccionario completo                 │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                            │ múltiples instancias
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Portfolio                                  │
+│  (Colección de PriceSeries con pesos asociados)                │
+│                                                                 │
+│  Atributos:                                                     │
+│  - symbols: List[str]                                           │
+│  - price_series: List[PriceSeries]                              │
+│  - weights: List[float]                                         │
+│                                                                 │
+│  Métodos principales:                                           │
+│  - get_portfolio_value_series() → valor combinado             │
+│  - get_portfolio_returns() → retornos de la cartera            │
+│  - monte_carlo_simulation() → simulación del portfolio        │
+│  - monte_carlo_individual_assets() → simulación por activo     │
+│  - plot_monte_carlo_results() → visualización                │
+│  - report() → reporte en Markdown                              │
+│  - plots_report() → generación de gráficos                    │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    DataCleaner                                  │
+│  (Limpieza y preprocesado de datos)                            │
+│                                                                 │
+│  Funcionalidad:                                                 │
+│  - Acepta datos en cualquier formato                           │
+│  - Normaliza a formato estándar                                 │
+│  - Limpia duplicados, outliers, valores faltantes             │
+│  - Crea PriceSeries desde datos externos                       │
+│                                                                 │
+│  Puede trabajar con:                                           │
+│  - DataFrames de pandas                                         │
+│  - Diccionarios                                                 │
+│  - Listas de diccionarios                                      │
+│  - Cualquier serie temporal de precios                         │
+└─────────────────────────────────────────────────────────────────┘
+
+───────────────────────────────────────────────────────────────────────────
+3. FLUJO DE DATOS PRINCIPAL
+───────────────────────────────────────────────────────────────────────────
+
+1. DataExtractor.download_historical_prices()
+   ↓
+2. StandardizedPriceData (formato unificado)
+   ↓
+3. PriceSeries.from_standardized_data()
+   ↓
+4. PriceSeries (con estadísticas automáticas)
+   ↓
+5. Portfolio (múltiples PriceSeries + pesos)
+   ↓
+6. Análisis: report(), plots_report(), monte_carlo_simulation()
+
+───────────────────────────────────────────────────────────────────────────
+4. ESTANDARIZACIÓN DE FORMATO
+───────────────────────────────────────────────────────────────────────────
+
+PROBLEMA RESUELTO:
+- Diferentes APIs devuelven datos en formatos diferentes
+- Ejemplo: Yahoo Finance vs Alpha Vantage vs otros
+
+SOLUCIÓN IMPLEMENTADA:
+- DataExtractor normaliza TODOS los datos a StandardizedPriceData
+- Todos los métodos _standardize_*() convergen al mismo formato
+- El resto del código funciona igual independientemente de la fuente
+
+BENEFICIOS:
+✓ Cambiar de fuente sin modificar código
+✓ Combinar datos de múltiples fuentes
+✓ Mantener coherencia en análisis
+
+───────────────────────────────────────────────────────────────────────────
+5. CREACIÓN DE PORTFOLIO
+───────────────────────────────────────────────────────────────────────────
+
+Una Portfolio se crea a partir de múltiples PriceSeries:
+
+1. Se descargan N series de datos (ej: AAPL, MSFT, GOOGL)
+2. Cada serie se convierte en PriceSeries
+3. Se asignan pesos a cada serie (ej: [0.4, 0.3, 0.3])
+4. Portfolio combina las series según los pesos
+
+La Portfolio calcula:
+- Valor total combinado (weighted sum)
+- Retornos combinados
+- Estadísticas del portfolio completo
+- Simulaciones Monte Carlo del conjunto
+
+───────────────────────────────────────────────────────────────────────────
+6. SIMULACIÓN DE MONTE CARLO
+───────────────────────────────────────────────────────────────────────────
+
+IMPLEMENTACIÓN:
+
+1. Calcula estadísticas históricas de retornos:
+   - Media de retornos (mean_return)
+   - Desviación estándar (std_return)
+
+2. Genera N simulaciones (por defecto 1000):
+   - Cada simulación genera retornos aleatorios (distribución normal)
+   - Proyecta la evolución día a día
+
+3. Resultados:
+   - DataFrame con todas las simulaciones
+   - Permite calcular percentiles, intervalos de confianza
+   - Visualización con gráficos
+
+PARÁMETROS CONFIGURABLES:
+- days: número de días a simular
+- simulations: número de simulaciones
+- initial_value: valor inicial (opcional)
+- random_seed: semilla para reproducibilidad
+
+DISPONIBLE PARA:
+- Portfolio completo (monte_carlo_simulation)
+- Activos individuales (monte_carlo_individual_assets)
+
+───────────────────────────────────────────────────────────────────────────
+7. MÉTODO .report()
+───────────────────────────────────────────────────────────────────────────
+
+GENERA REPORTE EN MARKDOWN CON:
+
+1. Composición del portfolio (tabla con símbolos, pesos, valores)
+2. Análisis individual de cada activo:
+   - Periodo, precio actual, retorno total
+   - Volatilidad, Sharpe ratio, máximo drawdown
+   - Skewness, kurtosis
+3. Análisis del portfolio completo:
+   - Retorno medio anualizado
+   - Volatilidad anualizada
+   - Ratio de Sharpe
+4. Matriz de correlación entre activos
+5. Advertencias y recomendaciones:
+   - Alta concentración (>50% en un activo)
+   - Alta correlación entre activos (>0.8)
+   - Alta volatilidad (>30%)
+   - Bajo ratio de Sharpe (<0.5)
+
+───────────────────────────────────────────────────────────────────────────
+8. MÉTODO .plots_report()
+───────────────────────────────────────────────────────────────────────────
+
+GENERA 6 TIPOS DE VISUALIZACIONES:
+
+1. Evolución de precios normalizados (todos los activos)
+2. Retornos diarios del portfolio
+3. Distribución de retornos (histograma)
+4. Composición del portfolio (gráfico de pastel)
+5. Matriz de correlación (heatmap)
+6. Drawdown del portfolio (área sombreada)
+
+TODOS LOS GRÁFICOS:
+- Se guardan en alta resolución (300 DPI)
+- Se muestran en pantalla
+- Usan seaborn para estilo profesional
+
+───────────────────────────────────────────────────────────────────────────
+9. LIMPIEZA Y PREPROCESADO
+───────────────────────────────────────────────────────────────────────────
+
+EL PROGRAMA ACEPTA CUALQUIER TIPO DE INPUT CON SERIE TEMPORAL:
+
+DataCleaner puede procesar:
+- DataFrames de pandas (con cualquier nombre de columnas)
+- Diccionarios con datos de precios
+- Listas de diccionarios
+- CSV files (después de leer con pandas)
+
+PROCESO DE LIMPIEZA:
+1. Detección automática de formato
+2. Normalización de nombres de columnas
+3. Identificación de columna de fecha
+4. Eliminación de duplicados
+5. Completado de valores faltantes (forward fill)
+6. Detección y corrección de outliers (Z-score > 3)
+7. Validación de coherencia (High >= Low, etc.)
+
+RESULTADO:
+- PriceSeries válida y lista para análisis
+- Validación automática con validate_price_series()
+
+───────────────────────────────────────────────────────────────────────────
+10. DEPENDENCIAS EXTERNAS
+───────────────────────────────────────────────────────────────────────────
+
+BIBLIOTECAS PRINCIPALES:
+- pandas: manipulación de datos
+- numpy: cálculos numéricos
+- yfinance: descarga de datos de Yahoo Finance
+- matplotlib: gráficos básicos
+- seaborn: gráficos avanzados y estilos
+- scipy: estadísticas avanzadas (skewness, kurtosis)
+
+DEPENDENCIAS DE SEGUNDO ORDEN:
+- requests: (incluida en yfinance)
+- python-dateutil: (incluida en pandas)
+
+───────────────────────────────────────────────────────────────────────────
+11. BUENAS PRÁCTICAS IMPLEMENTADAS
+───────────────────────────────────────────────────────────────────────────
+
+✓ Separación de responsabilidades (módulos independientes)
+✓ Estandarización de formatos (abstracción sobre APIs)
+✓ Cálculos automáticos (no necesidad de llamar manualmente)
+✓ Validación de datos (coherencia y calidad)
+✓ Documentación completa (docstrings, README)
+✓ Manejo de errores (try/except, mensajes claros)
+✓ Código extensible (fácil agregar nuevas fuentes de datos)
+✓ Reproducibilidad (random_seed en Monte Carlo)
+✓ Visualizaciones profesionales (gráficos de alta calidad)
+
+───────────────────────────────────────────────────────────────────────────
+12. EXTENSIBILIDAD
+───────────────────────────────────────────────────────────────────────────
+
+FÁCIL DE EXTENDER:
+
+1. Nuevas fuentes de datos:
+   - Agregar método _standardize_[fuente]_data() en DataExtractor
+   - Agregar fuente a supported_sources
+
+2. Nuevos métodos estadísticos:
+   - Agregar métodos a PriceSeries
+   - Se calculan automáticamente en get_summary_stats()
+
+3. Nuevas visualizaciones:
+   - Agregar gráficos en plots_report()
+
+4. Nuevos formatos de entrada:
+   - Extender DataCleaner.detect_data_format()
+   - Agregar normalización específica
+
+───────────────────────────────────────────────────────────────────────────
+
+Este proyecto demuestra:
+- Estructura modular y escalable
+- Abstracciones bien diseñadas
+- Estandarización de formatos
+- Buenas prácticas de programación
+- Código mantenible y extensible
+
+═══════════════════════════════════════════════════════════════════════════
+
