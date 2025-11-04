@@ -4,38 +4,19 @@ Este archivo contiene múltiples ejemplos para diferentes casos de uso
 """
 
 import sys
-import subprocess
 from pathlib import Path
 
+# Agregar el directorio raíz al path para importar install_dependencies
+project_root = Path(__file__).parent
+sys.path.insert(0, str(project_root))
 
-def ensure_dependencies():
-    """Verifica e instala dependencias automáticamente si faltan"""
-    required_packages = ['pandas', 'numpy', 'yfinance', 'matplotlib', 'seaborn', 'scipy']
-    missing = []
-    
-    for package in required_packages:
-        try:
-            __import__(package)
-        except ImportError:
-            missing.append(package)
-    
-    if missing:
-        print("Instalando dependencias faltantes...")
-        requirements_file = Path(__file__).parent / "requirements.txt"
-        if requirements_file.exists():
-            subprocess.check_call([
-                sys.executable, "-m", "pip", "install", "-r", str(requirements_file)
-            ])
-            print("✅ Dependencias instaladas")
-        else:
-            print("❌ No se encontró requirements.txt")
-            return False
-    
-    return True
-
+# Importar funciones de instalación desde el módulo dedicado
+from install_dependencies import check_and_install
 
 # Verificar dependencias antes de importar
-if not ensure_dependencies():
+if not check_and_install():
+    print("\n⚠️  No se pudieron instalar las dependencias.")
+    print("Ejecuta: python install_dependencies.py")
     sys.exit(1)
 
 from src.data_extractor import DataExtractor
