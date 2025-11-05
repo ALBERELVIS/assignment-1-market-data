@@ -1,8 +1,8 @@
 # Reporte de Análisis de Portfolio
 
-**Fecha de generación:** 2025-11-05 17:23:11
+**Fecha de generación:** 2025-11-06 00:38:44
 
-**Número de activos:** 6
+**Número de activos:** 4
 
 
 ---
@@ -11,14 +11,12 @@
 
 | Símbolo | Peso | Valor Actual |
 |---------|------|--------------|
-| AAPL | 16.67% | $269.53 |
-| ^IBEX | 16.67% | $16073.40 |
-| BTC-USD | 16.67% | $103174.97 |
-| ^DJI | 16.67% | $47062.14 |
-| ^GSPC | 16.67% | $6793.56 |
-| NVDA | 16.67% | $201.86 |
+| AAPL | 25.00% | $270.14 |
+| ^GSPC | 25.00% | $6796.29 |
+| PZZA | 25.00% | $41.26 |
+| ^IBEX | 25.00% | $16098.40 |
 
-**Valor total del portfolio:** $9054.52
+**Valor total del portfolio:** $1776.92
 
 
 ---
@@ -27,107 +25,106 @@
 
 ### AAPL
 
-- **Periodo:** 2015-11-05 a 2025-11-05
-- **Precio actual:** $269.53
-- **Retorno total:** 887.65%
-- **Volatilidad anualizada:** 21.00%
-- **Ratio de Sharpe:** 2.314
-- **Máximo Drawdown:** -38.52%
-- **Skewness:** 0.150
-- **Kurtosis:** 6.792
-
-
-### ^IBEX
-
-- **Periodo:** 2015-11-04 a 2025-11-04
-- **Precio actual:** $16073.40
-- **Retorno total:** 54.09%
-- **Volatilidad anualizada:** 8.84%
-- **Ratio de Sharpe:** 5.391
-- **Máximo Drawdown:** -45.16%
-- **Skewness:** -1.198
-- **Kurtosis:** 16.153
-
-
-### BTC-USD
-
-- **Periodo:** 2015-11-05 a 2025-11-05
-- **Precio actual:** $103174.97
-- **Retorno total:** 26604.78%
-- **Volatilidad anualizada:** 35.46%
-- **Ratio de Sharpe:** -4.133
-- **Máximo Drawdown:** -83.40%
-- **Skewness:** -0.048
-- **Kurtosis:** 7.820
-
-
-### ^DJI
-
-- **Periodo:** 2015-11-05 a 2025-11-05
-- **Precio actual:** $47062.14
-- **Retorno total:** 163.46%
-- **Volatilidad anualizada:** 10.13%
-- **Ratio de Sharpe:** 1.219
-- **Máximo Drawdown:** -37.09%
-- **Skewness:** -0.475
-- **Kurtosis:** 21.440
+- **Periodo:** 2024-11-06 a 2025-11-05
+- **Precio actual:** $270.14
+- **Retorno total:** 21.86%
+- **Volatilidad anualizada:** 21.01%
+- **Ratio de Sharpe:** 2.404
+- **Máximo Drawdown:** -33.36%
+- **Skewness:** 1.043
+- **Kurtosis:** 13.304
 
 
 ### ^GSPC
 
-- **Periodo:** 2015-11-05 a 2025-11-05
-- **Precio actual:** $6793.56
-- **Retorno total:** 223.51%
-- **Volatilidad anualizada:** 12.50%
-- **Ratio de Sharpe:** 1.267
-- **Máximo Drawdown:** -33.92%
-- **Skewness:** -0.372
-- **Kurtosis:** 15.491
+- **Periodo:** 2024-11-06 a 2025-11-05
+- **Precio actual:** $6796.29
+- **Retorno total:** 14.63%
+- **Volatilidad anualizada:** 12.47%
+- **Ratio de Sharpe:** 1.296
+- **Máximo Drawdown:** -18.90%
+- **Skewness:** 1.028
+- **Kurtosis:** 19.190
 
 
-### NVDA
+### PZZA
 
-- **Periodo:** 2015-11-05 a 2025-11-05
-- **Precio actual:** $201.86
-- **Retorno total:** 29876.39%
-- **Volatilidad anualizada:** 34.06%
-- **Ratio de Sharpe:** 3.155
-- **Máximo Drawdown:** -66.34%
-- **Skewness:** 0.538
-- **Kurtosis:** 8.010
+- **Periodo:** 2024-11-06 a 2025-11-05
+- **Precio actual:** $41.26
+- **Retorno total:** -26.00%
+- **Volatilidad anualizada:** 71.78%
+- **Ratio de Sharpe:** -0.901
+- **Máximo Drawdown:** -43.95%
+- **Skewness:** 0.735
+- **Kurtosis:** 5.025
+
+
+### ^IBEX
+
+- **Periodo:** 2024-11-04 a 2025-11-04
+- **Precio actual:** $16098.40
+- **Retorno total:** 35.98%
+- **Volatilidad anualizada:** 8.86%
+- **Ratio de Sharpe:** 5.529
+- **Máximo Drawdown:** -12.60%
+- **Skewness:** -1.223
+- **Kurtosis:** 7.089
 
 
 ---
 
 ## Análisis del Portfolio Completo
 
-- **Retorno medio anualizado:** 57685.21%
-- **Volatilidad anualizada:** 11950.34%
-- **Ratio de Sharpe:** 4.827
+- **Retorno medio anualizado:** 7440.57%
+- **Volatilidad anualizada:** 1322.47%
+- **Ratio de Sharpe:** 5.625
 
 
 ## Matriz de Correlación entre Activos
 
-| Activo | AAPL | ^IBEX | BTC-USD | ^DJI | ^GSPC | NVDA |
-|---|---|---|---|---|---|---|
-| **AAPL** | 1.000 | 0.000 | 0.000 | 0.678 | 0.755 | 0.538 |
-| **^IBEX** | 0.000 | 1.000 | 0.000 | 0.000 | 0.000 | 0.000 |
-| **BTC-USD** | 0.000 | 0.000 | 1.000 | 0.000 | 0.000 | 0.000 |
-| **^DJI** | 0.678 | 0.000 | 0.000 | 1.000 | 0.951 | 0.520 |
-| **^GSPC** | 0.755 | 0.000 | 0.000 | 0.951 | 1.000 | 0.652 |
-| **NVDA** | 0.538 | 0.000 | 0.000 | 0.520 | 0.652 | 1.000 |
+| Activo | AAPL | ^GSPC | PZZA | ^IBEX |
+|---|---|---|---|---|
+| **AAPL** | 1.000 | 0.756 | 0.254 | 0.000 |
+| **^GSPC** | 0.756 | 1.000 | 0.285 | 0.000 |
+| **PZZA** | 0.254 | 0.285 | 1.000 | 0.000 |
+| **^IBEX** | 0.000 | 0.000 | 0.000 | 1.000 |
+
+
+## Métricas Adicionales
+
+- **Retorno total del período:** -39.96%
+- **Máximo Drawdown:** -61.54%
+- **Value at Risk (95%):** -56.40%
+- **Conditional VaR (95%):** -56.90%
+- **Correlación promedio entre activos:** 0.216
+- **Ratio de diversificación:** 0.022
 
 
 ## Advertencias y Recomendaciones
 
-- ⚠️ **Alta correlación:** Los siguientes pares tienen correlación > 0.8:
+- ⚠️ **Alta volatilidad:** El portfolio tiene volatilidad anualizada de 1322.5%
 
--   - ^DJI - ^GSPC: 0.951
+- ✅ **Excelente ratio de Sharpe:** 5.625 (buen balance riesgo/retorno)
 
-- ⚠️ **Alta volatilidad:** El portfolio tiene volatilidad anualizada de 11950.3%
+- ⚠️ **Drawdown significativo:** Máximo drawdown de -61.5%
+
+- ⚠️ **Baja diversificación:** Ratio de diversificación de 0.022
+
+
+### Recomendaciones
+
+- - Considerar reducir la exposición a activos volátiles o agregar activos defensivos
+
+- - Considerar estrategias de gestión de riesgo o stop-loss
+
+- - El portfolio podría beneficiarse de mayor diversificación
 
 
 
 ---
 
-*Reporte generado automáticamente el 2025-11-05 17:23:11*
+*Reporte generado automáticamente el 2025-11-06 00:38:44*
+
+
+**Nota:** Este reporte es informativo y no constituye asesoramiento financiero.
+Las simulaciones y análisis están basados en datos históricos y pueden no reflejar resultados futuros.

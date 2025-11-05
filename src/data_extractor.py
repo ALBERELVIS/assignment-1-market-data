@@ -119,14 +119,64 @@ class YahooFinanceAdapter(APISourceAdapter):
     def get_historical_prices(self, symbol: str, start_date: Optional[str] = None,
                              end_date: Optional[str] = None, period: Optional[str] = "1y") -> pd.DataFrame:
         """Obtiene datos históricos desde Yahoo Finance"""
+        # Limpiar el símbolo: asegurar que ^ esté al inicio si es un índice
+        symbol = symbol.strip().upper()
+        
+        # Intentar obtener datos con manejo de errores mejorado
         ticker = yf.Ticker(symbol)
-        if start_date and end_date:
-            return ticker.history(start=start_date, end=end_date)
-        else:
-            return ticker.history(period=period or "1y")
+        
+        try:
+            if start_date and end_date:
+                df = ticker.history(start=start_date, end=end_date)
+            else:
+                df = ticker.history(period=period or "1y")
+            
+            # Verificar que se obtuvieron datos
+            if df.empty:
+                raise ValueError(f"No se encontraron datos para {symbol}. "
+                               f"Verifica que el símbolo sea correcto. "
+                               f"Para índices españoles, prueba: '^IBEX' o 'IBEX.MC'")
+            
+            # NORMALIZAR INMEDIATAMENTE el índice de fechas después de obtener los datos
+            # Esto es crítico: yfinance puede devolver fechas con timezone
+            # Usar la función centralizada de normalización para garantizar consistencia
+            from .data_cleaning import force_naive_datetime_index
+            df.index = force_naive_datetime_index(df.index)
+            
+            return df
+        except Exception as e:
+            # Si falla, intentar con formato alternativo para índices españoles
+            if symbol.startswith('^'):
+                # Intentar sin el ^ o con formato .MC
+                alt_symbols = [symbol.replace('^', ''), f"{symbol.replace('^', '')}.MC", symbol]
+                for alt_symbol in alt_symbols:
+                    try:
+                        ticker = yf.Ticker(alt_symbol)
+                        if start_date and end_date:
+                            df = ticker.history(start=start_date, end=end_date)
+                        else:
+                            df = ticker.history(period=period or "1y")
+                        
+                        if not df.empty:
+                            # Normalizar índice usando la función centralizada
+                            from .data_cleaning import force_naive_datetime_index
+                            df.index = force_naive_datetime_index(df.index)
+                            return df
+                    except:
+                        continue
+            
+            # Si todo falla, lanzar el error original con más contexto
+            raise ValueError(f"Error obteniendo datos para {symbol}: {e}. "
+                           f"Verifica que el símbolo sea correcto. "
+                           f"Para índices: usa formato ^SYMBOL (ej: ^IBEX, ^GSPC). "
+                           f"Para acciones españolas: usa formato SYMBOL.MC (ej: BBVA.MC)")
     
     def standardize_data(self, symbol: str, data: pd.DataFrame) -> StandardizedPriceData:
-        """Estandariza datos de Yahoo Finance"""
+        """
+        Estandariza datos de Yahoo Finance
+        SOLUCIÓN INTEGRAL: Normaliza TODOS los índices de fecha a naive (sin timezone)
+        Esto es crítico para evitar errores al mezclar índices con activos
+        """
         if data.empty:
             raise ValueError(f"No se encontraron datos para {symbol}")
         
@@ -135,14 +185,52 @@ class YahooFinanceAdapter(APISourceAdapter):
         if missing:
             raise ValueError(f"Faltan columnas requeridas: {missing}")
         
+        # NORMALIZACIÓN INTEGRAL: Asegurar que el índice esté sin timezone
+        # Esta es la normalización más importante: garantizar que el índice de fechas
+        # esté completamente naive antes de crear cualquier Serie
+        from .data_cleaning import force_naive_datetime_index
+        date_index = force_naive_datetime_index(data.index)
+        
+        # Verificación doble: asegurar que el índice normalizado realmente esté sin timezone
+        if hasattr(date_index, 'tz') and date_index.tz is not None:
+            # Si aún tiene timezone, forzar normalización de nuevo
+            date_index = force_naive_datetime_index(date_index)
+        
+        # Asegurar que todas las Series también tengan índices normalizados
+        # Esto es crítico porque las Series pueden heredar el índice con timezone
+        # Recrear TODAS las Series desde cero con el índice normalizado
+        open_series = pd.Series(data['Open'].values, index=date_index)
+        high_series = pd.Series(data['High'].values, index=date_index)
+        low_series = pd.Series(data['Low'].values, index=date_index)
+        close_series = pd.Series(data['Close'].values, index=date_index)
+        volume_series = pd.Series(data['Volume'].values, index=date_index)
+        
+        # Verificación final: asegurar que TODAS las series tengan índices naive
+        # Si alguna serie tiene timezone, recrearla con índice normalizado
+        if hasattr(open_series.index, 'tz') and open_series.index.tz is not None:
+            normalized_idx = force_naive_datetime_index(open_series.index)
+            open_series = pd.Series(open_series.values, index=normalized_idx)
+        if hasattr(high_series.index, 'tz') and high_series.index.tz is not None:
+            normalized_idx = force_naive_datetime_index(high_series.index)
+            high_series = pd.Series(high_series.values, index=normalized_idx)
+        if hasattr(low_series.index, 'tz') and low_series.index.tz is not None:
+            normalized_idx = force_naive_datetime_index(low_series.index)
+            low_series = pd.Series(low_series.values, index=normalized_idx)
+        if hasattr(close_series.index, 'tz') and close_series.index.tz is not None:
+            normalized_idx = force_naive_datetime_index(close_series.index)
+            close_series = pd.Series(close_series.values, index=normalized_idx)
+        if hasattr(volume_series.index, 'tz') and volume_series.index.tz is not None:
+            normalized_idx = force_naive_datetime_index(volume_series.index)
+            volume_series = pd.Series(volume_series.values, index=normalized_idx)
+        
         return StandardizedPriceData(
             symbol=symbol.upper(),
-            date=data.index,
-            open=data['Open'],
-            high=data['High'],
-            low=data['Low'],
-            close=data['Close'],
-            volume=data['Volume'],
+            date=date_index,
+            open=open_series,
+            high=high_series,
+            low=low_series,
+            close=close_series,
+            volume=volume_series,
             source=self.source_name
         )
     
@@ -156,54 +244,386 @@ class YahooFinanceAdapter(APISourceAdapter):
                 return []
             
             result = []
-            for date, row in recommendations.iterrows():
-                # Yahoo Finance puede tener diferentes formatos
-                if isinstance(row, pd.Series):
-                    rating = str(row.iloc[0]) if len(row) > 0 else "N/A"
-                else:
-                    rating = str(row)
-                
-                result.append(Recommendation(
-                    symbol=symbol.upper(),
-                    date=pd.to_datetime(date),
-                    firm="Yahoo Finance",
-                    rating=rating,
-                    source=self.source_name
-                ))
+            # ticker.recommendations devuelve un DataFrame agregado por período
+            # con columnas: period, strongBuy, buy, hold, sell, strongSell
+            for idx, row in recommendations.iterrows():
+                try:
+                    # Obtener el período (puede ser "0m", "-1m", etc.)
+                    period = str(row.get('period', 'N/A'))
+                    
+                    # Crear un resumen de recomendaciones basado en los conteos
+                    strong_buy = int(row.get('strongBuy', 0))
+                    buy = int(row.get('buy', 0))
+                    hold = int(row.get('hold', 0))
+                    sell = int(row.get('sell', 0))
+                    strong_sell = int(row.get('strongSell', 0))
+                    
+                    # Determinar el rating predominante
+                    ratings_dict = {
+                        'Strong Buy': strong_buy,
+                        'Buy': buy,
+                        'Hold': hold,
+                        'Sell': sell,
+                        'Strong Sell': strong_sell
+                    }
+                    dominant_rating = max(ratings_dict, key=ratings_dict.get) if any(ratings_dict.values()) else "N/A"
+                    
+                    # Usar fecha actual como aproximación (el DataFrame no tiene fechas específicas)
+                    # Intentar obtener la fecha del índice si existe
+                    if isinstance(idx, (pd.Timestamp, datetime)):
+                        rec_date = pd.to_datetime(idx)
+                        # Normalizar a datetime naive
+                        if hasattr(rec_date, 'tz') and rec_date.tz is not None:
+                            rec_date = rec_date.tz_localize(None)
+                        if isinstance(rec_date, pd.Timestamp):
+                            rec_date = rec_date.to_pydatetime()
+                    else:
+                        # Si no hay fecha, usar fecha actual
+                        rec_date = datetime.now()
+                    
+                    result.append(Recommendation(
+                        symbol=symbol.upper(),
+                        date=rec_date,
+                        firm="Yahoo Finance (Agregado)",
+                        rating=f"{dominant_rating} (Strong Buy: {strong_buy}, Buy: {buy}, Hold: {hold}, Sell: {sell}, Strong Sell: {strong_sell})",
+                        source=self.source_name
+                    ))
+                except Exception as e:
+                    # Si hay error procesando una fila, continuar con la siguiente
+                    continue
             
             return result
         except Exception as e:
             print(f"Error obteniendo recomendaciones de {symbol}: {e}")
+            import traceback
+            traceback.print_exc()
             return []
     
     def get_news(self, symbol: str, limit: int = 10) -> List[NewsItem]:
-        """Obtiene noticias desde Yahoo Finance"""
+        """Obtiene noticias desde Yahoo Finance - REESCRITO COMPLETAMENTE"""
+        import re
+        import json
+        
+        result = []
+        
+        # MÉTODO PRINCIPAL: Usar la API directa de Yahoo Finance (más confiable)
+        try:
+            # URL de la API de Yahoo Finance para búsqueda y noticias
+            url = f"https://query1.finance.yahoo.com/v1/finance/search?q={symbol}&quotesCount=1&newsCount={limit * 2}"
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': f'https://finance.yahoo.com/quote/{symbol}'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Extraer noticias del JSON
+                news_list = []
+                if 'news' in data and isinstance(data['news'], list):
+                    news_list = data['news']
+                elif isinstance(data, list):
+                    # A veces devuelve directamente una lista
+                    news_list = data
+                
+                # Procesar cada noticia
+                for idx, item in enumerate(news_list[:limit]):
+                    try:
+                        if not isinstance(item, dict):
+                            continue
+                        
+                        # Extraer título - formato Yahoo Finance API (múltiples ubicaciones posibles)
+                        title = None
+                        # Intentar diferentes campos y formatos
+                        if 'title' in item:
+                            title_val = item['title']
+                            if isinstance(title_val, dict):
+                                # Si es dict, puede tener 'text', 'title', 'headline', etc.
+                                title = title_val.get('text') or title_val.get('title') or title_val.get('headline') or str(title_val)
+                            elif isinstance(title_val, str):
+                                title = title_val
+                            else:
+                                title = str(title_val) if title_val else None
+                        
+                        if not title and 'headline' in item:
+                            headline_val = item['headline']
+                            if isinstance(headline_val, dict):
+                                title = headline_val.get('text') or headline_val.get('title') or headline_val.get('headline') or str(headline_val)
+                            elif isinstance(headline_val, str):
+                                title = headline_val
+                            else:
+                                title = str(headline_val) if headline_val else None
+                        
+                        # Verificar que tenemos un título válido
+                        if not title or title.strip() == '' or title == 'None':
+                            continue
+                        
+                        # Extraer resumen
+                        summary = ''
+                        if 'summary' in item:
+                            summary = item['summary']
+                        elif 'description' in item:
+                            summary = item['description']
+                        elif 'snippet' in item:
+                            summary = item['snippet']
+                        
+                        # Limpiar HTML
+                        if summary:
+                            summary = re.sub('<[^<]+?>', '', summary)
+                            summary = re.sub(r'\s+', ' ', summary).strip()
+                        
+                        # Extraer fecha
+                        news_date = datetime.now()
+                        if 'providerPublishTime' in item:
+                            try:
+                                ts = item['providerPublishTime']
+                                if isinstance(ts, (int, float)):
+                                    if ts > 1e10:  # Milisegundos
+                                        news_date = datetime.fromtimestamp(ts / 1000)
+                                    else:
+                                        news_date = datetime.fromtimestamp(ts)
+                            except:
+                                pass
+                        elif 'pubDate' in item:
+                            try:
+                                date_str = item['pubDate']
+                                news_date = pd.to_datetime(date_str)
+                                if isinstance(news_date, pd.Timestamp):
+                                    if news_date.tz is not None:
+                                        news_date = news_date.tz_localize(None).to_pydatetime()
+                                    else:
+                                        news_date = news_date.to_pydatetime()
+                            except:
+                                pass
+                        
+                        # Extraer URL
+                        url = None
+                        if 'link' in item:
+                            url = item['link']
+                        elif 'url' in item:
+                            url = item['url']
+                        elif 'uuid' in item:
+                            # Construir URL desde UUID
+                            uuid_val = item['uuid']
+                            if isinstance(uuid_val, str):
+                                url = f"https://finance.yahoo.com/news/{uuid_val}"
+                        
+                        # Validación final: asegurar que el título es válido antes de crear NewsItem
+                        title_str = str(title).strip() if title else ''
+                        if not title_str or title_str == '' or title_str == 'None':
+                            continue
+                        
+                        # Crear NewsItem solo si tenemos un título válido
+                        result.append(NewsItem(
+                            symbol=symbol.upper(),
+                            title=title_str,
+                            summary=str(summary) if summary else '',
+                            date=news_date,
+                            url=str(url) if url else None,
+                            source=self.source_name
+                        ))
+                    except Exception:
+                        continue
+                
+                if result:
+                    return result
+        except Exception:
+            pass
+        
+        # MÉTODO ALTERNATIVO 1: Intentar con yfinance directamente
         try:
             ticker = yf.Ticker(symbol)
-            # Intentar obtener noticias - yfinance puede tener diferentes atributos
-            news = []
-            if hasattr(ticker, 'news') and ticker.news:
-                news = ticker.news[:limit]
-            elif hasattr(ticker, 'get_news'):
-                news = ticker.get_news()[:limit] if callable(ticker.get_news) else []
+            news_list = ticker.news
             
-            result = []
-            for item in news:
-                # yfinance puede devolver diferentes formatos
-                if isinstance(item, dict):
-                    result.append(NewsItem(
-                        symbol=symbol.upper(),
-                        title=item.get('title', item.get('headline', 'Sin título')),
-                        summary=item.get('summary', item.get('description', '')),
-                        date=datetime.fromtimestamp(item.get('providerPublishTime', item.get('pubDate', 0))),
-                        url=item.get('link', item.get('url', '')),
-                        source=self.source_name
-                    ))
+            if news_list and isinstance(news_list, list):
+                for item in news_list[:limit]:
+                    try:
+                        if not isinstance(item, dict):
+                            continue
+                        
+                        # Formato yfinance: puede tener diferentes estructuras
+                        # Ejemplo: {'uuid': ..., 'title': {...}, 'provider': {...}, 'pubDate': ...}
+                        # o: {'title': 'texto', 'link': '...', 'publisher': '...'}
+                        title = None
+                        
+                        # Intentar múltiples campos y formatos
+                        if 'title' in item:
+                            title_obj = item['title']
+                            if isinstance(title_obj, dict):
+                                # Buscar en diferentes claves del dict
+                                title = (title_obj.get('text') or 
+                                        title_obj.get('title') or 
+                                        title_obj.get('headline') or
+                                        title_obj.get('plainText') or
+                                        str(title_obj))
+                            elif isinstance(title_obj, str) and title_obj.strip():
+                                title = title_obj.strip()
+                            else:
+                                title = str(title_obj).strip() if title_obj else None
+                        
+                        # Si no encontramos título, intentar 'headline'
+                        if (not title or title.strip() == '' or title == 'None') and 'headline' in item:
+                            headline_obj = item['headline']
+                            if isinstance(headline_obj, dict):
+                                title = (headline_obj.get('text') or 
+                                        headline_obj.get('title') or 
+                                        headline_obj.get('headline') or
+                                        headline_obj.get('plainText') or
+                                        str(headline_obj))
+                            elif isinstance(headline_obj, str) and headline_obj.strip():
+                                title = headline_obj.strip()
+                            else:
+                                title = str(headline_obj).strip() if headline_obj else None
+                        
+                        # Si aún no hay título, intentar otros campos comunes
+                        if (not title or title.strip() == '' or title == 'None'):
+                            for field in ['name', 'text', 'plainText', 'content']:
+                                if field in item:
+                                    field_val = item[field]
+                                    if isinstance(field_val, str) and field_val.strip():
+                                        title = field_val.strip()
+                                        break
+                                    elif isinstance(field_val, dict):
+                                        title = (field_val.get('text') or 
+                                                field_val.get('title') or 
+                                                field_val.get('headline') or
+                                                str(field_val))
+                                        if title and title.strip() and title != 'None':
+                                            break
+                        
+                        # Verificar que tenemos un título válido
+                        if not title or title.strip() == '' or title == 'None':
+                            # Si no hay título, saltar esta noticia
+                            continue
+                        
+                        # Resumen
+                        summary = ''
+                        if 'summary' in item:
+                            summary_obj = item['summary']
+                            if isinstance(summary_obj, dict):
+                                summary = summary_obj.get('text', summary_obj.get('summary', ''))
+                            elif isinstance(summary_obj, str):
+                                summary = summary_obj
+                        
+                        # Limpiar HTML
+                        if summary:
+                            summary = re.sub('<[^<]+?>', '', summary)
+                            summary = re.sub(r'\s+', ' ', summary).strip()
+                        
+                        # Fecha
+                        news_date = datetime.now()
+                        if 'pubDate' in item:
+                            try:
+                                date_val = item['pubDate']
+                                if isinstance(date_val, (int, float)):
+                                    if date_val > 1e10:
+                                        news_date = datetime.fromtimestamp(date_val / 1000)
+                                    else:
+                                        news_date = datetime.fromtimestamp(date_val)
+                                else:
+                                    news_date = pd.to_datetime(date_val)
+                                    if isinstance(news_date, pd.Timestamp):
+                                        if news_date.tz is not None:
+                                            news_date = news_date.tz_localize(None).to_pydatetime()
+                                        else:
+                                            news_date = news_date.to_pydatetime()
+                            except:
+                                pass
+                        
+                        # URL
+                        url = None
+                        if 'uuid' in item:
+                            uuid_val = item['uuid']
+                            if isinstance(uuid_val, str):
+                                if '/' in uuid_val:
+                                    url = f"https://finance.yahoo.com/news/{uuid_val.split('/')[-1]}"
+                                else:
+                                    url = f"https://finance.yahoo.com/news/{uuid_val}"
+                        
+                        # Validación final del título
+                        title_str = str(title).strip() if title else ''
+                        if not title_str or title_str == '' or title_str == 'None':
+                            continue
+                        
+                        result.append(NewsItem(
+                            symbol=symbol.upper(),
+                            title=title_str,
+                            summary=str(summary) if summary else '',
+                            date=news_date,
+                            url=str(url) if url else None,
+                            source=self.source_name
+                        ))
+                    except Exception as e:
+                        # Debug: mostrar error si es necesario
+                        continue
+                
+                if result:
+                    return result
+        except Exception:
+            pass
+        
+        # MÉTODO ALTERNATIVO 2: Endpoint alternativo de Yahoo
+        try:
+            url = f"https://query2.finance.yahoo.com/v1/finance/search?q={symbol}&quotesCount=1&newsCount={limit * 2}"
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'application/json'
+            }
+            response = requests.get(url, headers=headers, timeout=15)
             
-            return result
-        except Exception as e:
-            print(f"Error obteniendo noticias de {symbol}: {e}")
-            return []
+            if response.status_code == 200:
+                data = response.json()
+                if 'news' in data and isinstance(data['news'], list):
+                    for item in data['news'][:limit]:
+                        try:
+                            if not isinstance(item, dict):
+                                continue
+                            
+                            title = item.get('title') or item.get('headline')
+                            if not title:
+                                continue
+                            
+                            summary = item.get('summary') or item.get('description') or item.get('snippet', '')
+                            if summary:
+                                summary = re.sub('<[^<]+?>', '', summary)
+                                summary = re.sub(r'\s+', ' ', summary).strip()
+                            
+                            news_date = datetime.now()
+                            if 'providerPublishTime' in item:
+                                try:
+                                    ts = item['providerPublishTime']
+                                    if isinstance(ts, (int, float)):
+                                        news_date = datetime.fromtimestamp(ts / 1000 if ts > 1e10 else ts)
+                                except:
+                                    pass
+                            
+                            url = item.get('link') or item.get('url')
+                            if not url and 'uuid' in item:
+                                url = f"https://finance.yahoo.com/news/{item['uuid']}"
+                            
+                            # Validación final del título
+                            title_str = str(title).strip() if title else ''
+                            if not title_str or title_str == '' or title_str == 'None':
+                                continue
+                            
+                            result.append(NewsItem(
+                                symbol=symbol.upper(),
+                                title=title_str,
+                                summary=str(summary),
+                                date=news_date,
+                                url=str(url) if url else None,
+                                source=self.source_name
+                            ))
+                        except Exception:
+                            continue
+        except Exception:
+            pass
+        
+        return result
     
     def get_company_info(self, symbol: str) -> Dict[str, Any]:
         """Obtiene información de la empresa desde Yahoo Finance"""
@@ -405,9 +825,11 @@ class DataExtractor:
                                  source: str = "yahoo") -> Dict[str, StandardizedPriceData]:
         """
         Descarga N series de datos al mismo tiempo
+        SOLUCIÓN INTEGRAL: Normaliza TODOS los índices de fecha a naive (sin timezone)
+        para evitar errores al mezclar índices con activos
         
         Args:
-            symbols: Lista de símbolos a descargar
+            symbols: Lista de símbolos a descargar (puede incluir índices y activos mezclados)
             start_date: Fecha inicio (YYYY-MM-DD)
             end_date: Fecha fin (YYYY-MM-DD)
             period: Período si no se especifican fechas
@@ -415,10 +837,14 @@ class DataExtractor:
         
         Returns:
             Dict con símbolo como clave y StandardizedPriceData como valor
+            TODOS con índices de fecha completamente normalizados (naive)
         """
+        from .data_cleaning import force_naive_datetime_index
+        
         results = {}
         for symbol in symbols:
             try:
+                # Descargar datos históricos
                 data = self.download_historical_prices(
                     symbol=symbol,
                     start_date=start_date,
@@ -426,9 +852,66 @@ class DataExtractor:
                     period=period,
                     source=source
                 )
-                results[symbol.upper()] = data
+                
+                # NORMALIZACIÓN INTEGRAL: Asegurar que TODOS los índices estén sin timezone
+                # Esto es crítico cuando se mezclan índices (^IBEX) con activos (AAPL)
+                # porque pueden tener diferentes timezones y pandas falla al alinearlos
+                
+                # Normalizar el índice de fecha principal
+                normalized_date = force_naive_datetime_index(data.date)
+                
+                # Recrear TODAS las Series con índices completamente nuevos y normalizados
+                # Esto garantiza que ninguna serie herede timezone del índice original
+                open_series = pd.Series(data.open.values, index=normalized_date)
+                high_series = pd.Series(data.high.values, index=normalized_date)
+                low_series = pd.Series(data.low.values, index=normalized_date)
+                close_series = pd.Series(data.close.values, index=normalized_date)
+                volume_series = pd.Series(data.volume.values, index=normalized_date)
+                
+                # Verificar que TODAS las series tengan índices naive
+                for series in [open_series, high_series, low_series, close_series, volume_series]:
+                    if hasattr(series.index, 'tz') and series.index.tz is not None:
+                        # Si por alguna razón aún tiene timezone, forzar normalización
+                        series.index = force_naive_datetime_index(series.index)
+                
+                # Crear nuevo StandardizedPriceData con datos completamente normalizados
+                normalized_data = StandardizedPriceData(
+                    symbol=data.symbol,
+                    date=normalized_date,
+                    open=open_series,
+                    high=high_series,
+                    low=low_series,
+                    close=close_series,
+                    volume=volume_series,
+                    source=data.source
+                )
+                
+                # Verificación final: asegurar que el índice de fecha esté completamente naive
+                if hasattr(normalized_data.date, 'tz') and normalized_data.date.tz is not None:
+                    normalized_data.date = force_naive_datetime_index(normalized_data.date)
+                
+                results[symbol.upper()] = normalized_data
+                
             except Exception as e:
                 print(f"Error descargando {symbol}: {str(e)}")
+                continue
+        
+        # Verificación final: asegurar que TODAS las series en el diccionario tengan índices naive
+        # Esto es una capa adicional de seguridad para evitar problemas al usar estas series juntas
+        for symbol, data in results.items():
+            try:
+                # Verificar y normalizar el índice de fecha principal
+                if hasattr(data.date, 'tz') and data.date.tz is not None:
+                    data.date = force_naive_datetime_index(data.date)
+                
+                # Verificar y normalizar todas las Series
+                for attr_name in ['open', 'high', 'low', 'close', 'volume']:
+                    series = getattr(data, attr_name)
+                    if hasattr(series, 'index') and hasattr(series.index, 'tz') and series.index.tz is not None:
+                        normalized_idx = force_naive_datetime_index(series.index)
+                        setattr(data, attr_name, pd.Series(series.values, index=normalized_idx))
+            except Exception as e:
+                print(f"Advertencia: Error normalizando {symbol}: {e}")
                 continue
         
         return results
@@ -548,7 +1031,8 @@ class DataExtractor:
     def get_all_data(self, symbol: str, source: str = "yahoo",
                     include_news: bool = True,
                     include_recommendations: bool = True,
-                    include_info: bool = True) -> Dict[str, Any]:
+                    include_info: bool = True,
+                    news_limit: int = 10) -> Dict[str, Any]:
         """
         Obtiene todos los datos disponibles para un símbolo
         
@@ -558,6 +1042,7 @@ class DataExtractor:
             include_news: Si True, incluye noticias
             include_recommendations: Si True, incluye recomendaciones
             include_info: Si True, incluye información de empresa
+            news_limit: Número máximo de noticias a obtener (por defecto 10)
         
         Returns:
             Diccionario con todos los datos disponibles
@@ -579,9 +1064,11 @@ class DataExtractor:
         
         if include_news:
             try:
-                result['news'] = self.get_news(symbol, source=source)
+                result['news'] = self.get_news(symbol, limit=news_limit, source=source)
             except Exception as e:
                 print(f"Error obteniendo noticias de {symbol}: {e}")
+                import traceback
+                traceback.print_exc()
         
         if include_recommendations:
             try:

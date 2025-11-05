@@ -35,6 +35,9 @@ class PriceSeries:
     
     def __post_init__(self):
         """Calcula automáticamente media y desviación típica al crear el objeto"""
+        # FORZAR normalización de fechas en el post_init para asegurar que siempre estén sin timezone
+        from .data_cleaning import force_naive_datetime_index
+        self.date = force_naive_datetime_index(self.date)
         self._calculate_basic_stats()
     
     def _calculate_basic_stats(self):
@@ -199,9 +202,13 @@ class PriceSeries:
         Returns:
             PriceSeries
         """
+        # FORZAR normalización de fechas antes de crear PriceSeries
+        from .data_cleaning import force_naive_datetime_index
+        normalized_date = force_naive_datetime_index(data.date)
+        
         return cls(
             symbol=data.symbol,
-            date=data.date,
+            date=normalized_date,
             open=data.open,
             high=data.high,
             low=data.low,

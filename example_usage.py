@@ -138,105 +138,12 @@ def ejemplo_3_portfolio_personalizado():
     print("\n✓ Análisis completo guardado")
 
 
-def ejemplo_4_monte_carlo_corto_plazo():
+def ejemplo_4_analisis_indices():
     """
-    Ejemplo 4: Simulación Monte Carlo a corto plazo (1 mes)
-    """
-    print("\n" + "=" * 60)
-    print("EJEMPLO 4: Monte Carlo - Corto Plazo (1 Mes)")
-    print("=" * 60)
-    
-    extractor = DataExtractor()
-    symbols = ["AAPL", "MSFT"]
-    data_dict = extractor.download_multiple_series(symbols, period="1y")
-    
-    price_series = [
-        PriceSeries.from_standardized_data(data_dict[sym])
-        for sym in symbols
-    ]
-    
-    portfolio = Portfolio(
-        symbols=symbols,
-        price_series=price_series,
-        weights=[0.6, 0.4]
-    )
-    
-    # Simulación a 1 mes (aprox 20 días de trading)
-    print("\nEjecutando simulación Monte Carlo (20 días, 1000 simulaciones)...")
-    mc_results = portfolio.monte_carlo_simulation(
-        days=20,
-        simulations=1000,
-        random_seed=42
-    )
-    
-    # Estadísticas
-    final_values = mc_results.iloc[:, -1]
-    print(f"\nResultados de la simulación:")
-    print(f"  Valor esperado: ${final_values.mean():.2f}")
-    print(f"  Mínimo (5%): ${final_values.quantile(0.05):.2f}")
-    print(f"  Máximo (95%): ${final_values.quantile(0.95):.2f}")
-    
-    # Visualizar
-    portfolio.plot_monte_carlo_results(
-        mc_results,
-        save_path="monte_carlo_corto_plazo.png",
-        title="Simulación Monte Carlo - 1 Mes"
-    )
-    
-    print("\n✓ Simulación completada y visualizada")
-
-
-def ejemplo_5_monte_carlo_largo_plazo():
-    """
-    Ejemplo 5: Simulación Monte Carlo a largo plazo (5 años)
+    Ejemplo 4: Análisis de índices bursátiles
     """
     print("\n" + "=" * 60)
-    print("EJEMPLO 5: Monte Carlo - Largo Plazo (5 Años)")
-    print("=" * 60)
-    
-    extractor = DataExtractor()
-    symbols = ["AAPL", "MSFT", "GOOGL"]
-    data_dict = extractor.download_multiple_series(symbols, period="5y")  # Más datos históricos
-    
-    price_series = [
-        PriceSeries.from_standardized_data(data_dict[sym])
-        for sym in symbols
-    ]
-    
-    portfolio = Portfolio(
-        symbols=symbols,
-        price_series=price_series
-    )
-    
-    # Simulación a 5 años (252 * 5 = 1260 días)
-    print("\nEjecutando simulación Monte Carlo (1260 días, 2000 simulaciones)...")
-    mc_results = portfolio.monte_carlo_simulation(
-        days=1260,
-        simulations=2000,
-        random_seed=42
-    )
-    
-    final_values = mc_results.iloc[:, -1]
-    print(f"\nResultados de la simulación a 5 años:")
-    print(f"  Valor esperado: ${final_values.mean():.2f}")
-    print(f"  Percentil 5%: ${final_values.quantile(0.05):.2f}")
-    print(f"  Percentil 95%: ${final_values.quantile(0.95):.2f}")
-    
-    portfolio.plot_monte_carlo_results(
-        mc_results,
-        save_path="monte_carlo_largo_plazo.png",
-        title="Simulación Monte Carlo - 5 Años"
-    )
-    
-    print("\n✓ Simulación completada")
-
-
-def ejemplo_6_analisis_indices():
-    """
-    Ejemplo 6: Análisis de índices bursátiles
-    """
-    print("\n" + "=" * 60)
-    print("EJEMPLO 6: Análisis de Índices Bursátiles")
+    print("EJEMPLO 4: Análisis de Índices Bursátiles")
     print("=" * 60)
     
     extractor = DataExtractor()
@@ -276,53 +183,12 @@ def ejemplo_6_analisis_indices():
     print("\n✓ Análisis de índices completado")
 
 
-def ejemplo_7_monte_carlo_individual():
+def ejemplo_5_correlacion_activos():
     """
-    Ejemplo 7: Simulación Monte Carlo para activos individuales
-    """
-    print("\n" + "=" * 60)
-    print("EJEMPLO 7: Monte Carlo por Activo Individual")
-    print("=" * 60)
-    
-    extractor = DataExtractor()
-    symbols = ["AAPL", "MSFT", "GOOGL"]
-    data_dict = extractor.download_multiple_series(symbols, period="1y")
-    
-    price_series = [
-        PriceSeries.from_standardized_data(data_dict[sym])
-        for sym in symbols
-    ]
-    
-    portfolio = Portfolio(
-        symbols=symbols,
-        price_series=price_series
-    )
-    
-    # Simulación individual
-    print("\nEjecutando simulaciones individuales...")
-    individual_mc = portfolio.monte_carlo_individual_assets(
-        days=252,
-        simulations=1000,
-        random_seed=42
-    )
-    
-    print("\nResultados por activo:")
-    for symbol, sim_df in individual_mc.items():
-        final_values = sim_df.iloc[:, -1]
-        print(f"\n  {symbol}:")
-        print(f"    Valor esperado: ${final_values.mean():.2f}")
-        print(f"    Percentil 5%: ${final_values.quantile(0.05):.2f}")
-        print(f"    Percentil 95%: ${final_values.quantile(0.95):.2f}")
-    
-    print("\n✓ Simulaciones individuales completadas")
-
-
-def ejemplo_8_correlacion_activos():
-    """
-    Ejemplo 8: Análisis de correlación entre activos
+    Ejemplo 5: Análisis de correlación entre activos
     """
     print("\n" + "=" * 60)
-    print("EJEMPLO 8: Análisis de Correlación")
+    print("EJEMPLO 5: Análisis de Correlación")
     print("=" * 60)
     
     extractor = DataExtractor()
@@ -363,12 +229,9 @@ def main():
     print("  1. Análisis de una acción")
     print("  2. Portfolio equilibrado")
     print("  3. Portfolio personalizado")
-    print("  4. Monte Carlo corto plazo")
-    print("  5. Monte Carlo largo plazo")
-    print("  6. Análisis de índices")
-    print("  7. Monte Carlo individual")
-    print("  8. Análisis de correlación")
-    print("  9. Ejecutar todos")
+    print("  4. Análisis de índices")
+    print("  5. Análisis de correlación")
+    print("  6. Ejecutar todos")
     print("  0. Salir")
     
     choice = input("\nOpción: ").strip()
@@ -377,14 +240,11 @@ def main():
         "1": ejemplo_1_analisis_una_accion,
         "2": ejemplo_2_portfolio_equilibrado,
         "3": ejemplo_3_portfolio_personalizado,
-        "4": ejemplo_4_monte_carlo_corto_plazo,
-        "5": ejemplo_5_monte_carlo_largo_plazo,
-        "6": ejemplo_6_analisis_indices,
-        "7": ejemplo_7_monte_carlo_individual,
-        "8": ejemplo_8_correlacion_activos
+        "4": ejemplo_4_analisis_indices,
+        "5": ejemplo_5_correlacion_activos
     }
     
-    if choice == "9":
+    if choice == "6":
         for func in examples.values():
             try:
                 func()
