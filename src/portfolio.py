@@ -112,7 +112,10 @@ class Portfolio:
     
     def get_portfolio_value_series(self) -> pd.Series:
         """
-        Calcula la serie de valores de la cartera combinada
+        Calcula la serie de valores de la cartera combinada usando retornos ponderados.
+        Este método calcula los retornos de cada activo, los combina según los pesos,
+        y luego aplica estos retornos a un valor inicial, lo que permite mezclar activos
+        con diferentes escalas (acciones vs índices) correctamente.
         
         Returns:
             Serie temporal del valor total de la cartera
@@ -120,40 +123,80 @@ class Portfolio:
         if not self.price_series:
             return pd.Series(dtype=float)
         
-        # SOLUCIÓN INTEGRAL: Crear series de precios ponderadas con índices completamente normalizados
-        weighted_series = []
+        # PASO 1: Calcular retornos diarios para cada activo
+        returns_dict = {}
+        
         for i, ps in enumerate(self.price_series):
-            # FORZAR normalización de fechas usando la función de data_cleaning
-            ps_dates = force_naive_datetime_index(ps.date)
+            if len(ps.close) == 0:
+                continue
+                
+            # Calcular retornos diarios usando el método de PriceSeries
+            asset_returns = ps.returns().dropna()
             
-            # Crear serie ponderada con valores y índice completamente nuevos para evitar problemas
-            weighted_values = (ps.close * self.weights[i]).values
-            weighted_series.append(pd.Series(weighted_values, index=ps_dates))
+            # FORZAR normalización de fechas
+            normalized_dates = force_naive_datetime_index(asset_returns.index)
+            asset_returns.index = normalized_dates
+            
+            # Aplicar peso del activo
+            weighted_returns = asset_returns * self.weights[i]
+            returns_dict[i] = weighted_returns
         
-        # Asegurar que TODAS las series tengan índices completamente naive ANTES de concatenar
-        for i, ws in enumerate(weighted_series):
-            normalized_index = force_naive_datetime_index(ws.index)
-            weighted_series[i] = pd.Series(ws.values, index=normalized_index)
+        if not returns_dict:
+            return pd.Series(dtype=float)
         
-        # Combinar todas las series usando pd.concat (alinea automáticamente por fecha)
-        if len(weighted_series) == 1:
-            portfolio_series = weighted_series[0].copy()
+        # PASO 2: Alinear todas las series de retornos por fecha y sumar
+        # Usar pd.concat para alinear automáticamente por fecha
+        if len(returns_dict) == 1:
+            portfolio_returns = list(returns_dict.values())[0]
         else:
-            # Concatenar y sumar los valores por fecha
-            combined_df = pd.concat(weighted_series, axis=1, join='outer', sort=True)
-            portfolio_series = combined_df.sum(axis=1)
+            # Concatenar y sumar los retornos ponderados por fecha
+            returns_df = pd.DataFrame(returns_dict)
+            portfolio_returns = returns_df.sum(axis=1)
         
-        # FORZAR normalización del índice final de forma MÁS AGRESIVA
-        # Extraer valores directamente y recrear todo desde cero usando numpy
-        portfolio_values = portfolio_series.values.copy()
+        # Limpiar retornos: eliminar NaN e infinitos
+        portfolio_returns = portfolio_returns.replace([np.inf, -np.inf], np.nan).dropna()
+        
+        if len(portfolio_returns) == 0:
+            return pd.Series(dtype=float)
+        
+        # PASO 3: Calcular valor inicial del portfolio
+        # Usar un valor base normalizado (1000) para que el portfolio tenga un valor inicial coherente
+        # independientemente de las escalas de los activos (acciones vs índices)
+        # El portfolio normalizado empieza en 1000, y luego se escala según los retornos
+        initial_value = 1000.0
+        
+        # PASO 4: Calcular valores del portfolio aplicando retornos acumulados
+        # Ordenar fechas de retornos
+        sorted_dates = sorted(portfolio_returns.index)
+        
+        # Crear serie de valores del portfolio
+        portfolio_values = pd.Series(index=sorted_dates, dtype=float)
+        portfolio_values.iloc[0] = initial_value
+        
+        # Aplicar retornos acumulados día a día
+        for i in range(1, len(sorted_dates)):
+            date = sorted_dates[i]
+            
+            # Obtener retorno del portfolio para esta fecha
+            if date in portfolio_returns.index:
+                portfolio_return = portfolio_returns.loc[date]
+                # Validar que el retorno sea finito
+                if not np.isfinite(portfolio_return):
+                    portfolio_return = 0.0
+            else:
+                # Si no hay retorno para esta fecha, usar 0 (sin cambio)
+                portfolio_return = 0.0
+            
+            # Aplicar retorno al valor anterior
+            portfolio_values.iloc[i] = portfolio_values.iloc[i-1] * (1 + portfolio_return)
+        
+        # PASO 5: Normalizar el índice final
+        portfolio_values_array = portfolio_values.values.copy()
         
         # Convertir cada fecha del índice a numpy datetime64[ns] individualmente
-        # Esto garantiza que ninguna fecha tenga timezone
         numpy_dates = []
-        for dt in portfolio_series.index:
-            # Convertir a numpy datetime64[ns] (garantiza naive)
+        for dt in portfolio_values.index:
             if isinstance(dt, pd.Timestamp):
-                # Si tiene timezone, extraer solo los componentes de fecha/hora
                 if hasattr(dt, 'tz') and dt.tz is not None:
                     dt = dt.tz_localize(None)
                 numpy_dates.append(np.datetime64(dt))
@@ -165,7 +208,7 @@ class Portfolio:
         new_index = pd.DatetimeIndex(numpy_index_array)
         
         # Recrear la serie completamente con el nuevo índice
-        portfolio_series = pd.Series(portfolio_values, index=new_index)
+        portfolio_series = pd.Series(portfolio_values_array, index=new_index)
         
         # Rellenar valores faltantes con forward fill y luego backward fill
         portfolio_series = portfolio_series.ffill().bfill()
@@ -219,11 +262,22 @@ class Portfolio:
         
         portfolio_value = self.get_portfolio_value_series()
         
-        # Calcular valor actual del portfolio de manera correcta
+        # Calcular estadísticas del portfolio
         if len(portfolio_value) > 0:
-            current_value = float(portfolio_value.iloc[-1])
+            initial_value = float(portfolio_value.iloc[0])
+            final_value = float(portfolio_value.iloc[-1])
+            median_value = float(portfolio_value.median())
+            
+            # Calcular beneficio total esperado en porcentaje
+            if initial_value > 0:
+                total_return_pct = ((final_value - initial_value) / initial_value) * 100
+            else:
+                total_return_pct = 0.0
         else:
-            current_value = 0.0
+            initial_value = 0.0
+            final_value = 0.0
+            median_value = 0.0
+            total_return_pct = 0.0
         
         # Mostrar composición con valores normalizados (para índices con valores enormes)
         for i, symbol in enumerate(self.symbols):
@@ -231,13 +285,11 @@ class Portfolio:
             weight = self.weights[i]
             asset_price = float(ps.close.iloc[-1])
             
-            # Calcular valor aportado al portfolio (precio * peso)
-            # Para índices con valores enormes, mostrar el precio pero el valor aportado es proporcional
-            asset_contribution = current_value * weight if current_value > 0 else 0.0
-            
             report_lines.append(f"| {symbol} | {weight*100:.2f}% | ${asset_price:.2f} |")
         
-        report_lines.append(f"\n**Valor total del portfolio:** ${current_value:.2f}\n")
+        # Mostrar mediana y beneficio total esperado
+        report_lines.append(f"\n**Valor mediano del portfolio:** ${median_value:.2f}")
+        report_lines.append(f"**Beneficio total esperado:** {total_return_pct:.2f}%\n")
         report_lines.append("\n---\n")
         
         # Análisis individual de activos
@@ -641,7 +693,7 @@ class Portfolio:
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.savefig(f"{save_dir}/price_evolution.png", dpi=300, bbox_inches='tight')
-        plt.show()
+        plt.close()
         
         # 2. Retornos diarios del portfolio
         fig, ax = plt.subplots(figsize=(14, 6))
@@ -655,7 +707,7 @@ class Portfolio:
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.savefig(f"{save_dir}/daily_returns.png", dpi=300, bbox_inches='tight')
-        plt.show()
+        plt.close()
         
         # 3. Distribución de retornos
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -669,7 +721,7 @@ class Portfolio:
         ax.grid(True, alpha=0.3)
         plt.tight_layout()
         plt.savefig(f"{save_dir}/returns_distribution.png", dpi=300, bbox_inches='tight')
-        plt.show()
+        plt.close()
         
         # 4. Composición del portfolio (pie chart)
         # Asegurar que siempre se muestren todos los activos
@@ -737,6 +789,7 @@ class Portfolio:
         # 6. Drawdown del portfolio
         fig, ax = plt.subplots(figsize=(14, 6))
         portfolio_value = self.get_portfolio_value_series()
+        portfolio_returns = self.get_portfolio_returns()
         cumulative = (1 + portfolio_returns).cumprod()
         running_max = cumulative.expanding().max()
         drawdown = (cumulative - running_max) / running_max
@@ -750,7 +803,7 @@ class Portfolio:
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.savefig(f"{save_dir}/drawdown.png", dpi=300, bbox_inches='tight')
-        plt.show()
+        plt.close()
         
         print(f"\n✅ Todos los gráficos han sido guardados en el directorio '{save_dir}/'")
     

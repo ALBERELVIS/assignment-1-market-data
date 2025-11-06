@@ -963,6 +963,16 @@ def crear_cartera_personalizada(extractor: DataExtractor):
             f.write(report)
         print(f"   ✅ Reporte guardado en '{filename}'")
         
+        # Generar todos los gráficos del reporte
+        print("\n📈 Generando gráficos del reporte...")
+        try:
+            portfolio.plots_report(save_dir="plots")
+            print("   ✅ Gráficos guardados en 'plots/'")
+        except Exception as e:
+            print(f"   ⚠️  Error generando algunos gráficos: {e}")
+            import traceback
+            traceback.print_exc()
+        
         # Preguntar si quiere ver el reporte
         ver_reporte = input("\n¿Quieres ver el reporte por pantalla? (s/n, Enter para no): ").strip().lower()
         if ver_reporte == 's':
