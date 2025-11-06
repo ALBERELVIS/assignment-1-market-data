@@ -136,6 +136,7 @@ class PriceSeries:
     def correlation_with(self, other: 'PriceSeries') -> float:
         """
         Calcula la correlación con otra serie de precios
+        Usa alineación de fechas más robusta para manejar diferentes calendarios de trading
         
         Args:
             other: Otra PriceSeries
@@ -147,15 +148,54 @@ class PriceSeries:
         self_returns = self.returns()
         other_returns = other.returns()
         
+        # Primero intentar intersección exacta
         common_dates = self_returns.index.intersection(other_returns.index)
-        if len(common_dates) < 2:
+        
+        # Si hay pocas fechas comunes, intentar alineación más flexible
+        # Esto es común cuando se mezclan mercados con diferentes calendarios (ej: IBEX vs S&P 500)
+        if len(common_dates) < 10:
+            # Obtener todas las fechas únicas de ambas series
+            all_dates = self_returns.index.union(other_returns.index).sort_values()
+            
+            # Reindexar ambas series a todas las fechas y usar forward fill solo para gaps pequeños
+            # Esto preserva los datos reales pero permite alinear series con calendarios ligeramente diferentes
+            self_reindexed = self_returns.reindex(all_dates)
+            other_reindexed = other_returns.reindex(all_dates)
+            
+            # Usar forward fill solo para gaps de máximo 3 días (para manejar fines de semana/festivos)
+            # Esto evita crear correlaciones artificiales con forward fill largo
+            self_filled = self_reindexed.ffill(limit=3)
+            other_filled = other_reindexed.ffill(limit=3)
+            
+            # Solo usar fechas donde ambas series tienen datos válidos
+            valid_mask = ~(self_filled.isna() | other_filled.isna())
+            
+            if valid_mask.sum() < 10:
+                # Si aún no hay suficientes datos, intentar con intersección original
+                if len(common_dates) >= 2:
+                    aligned_self = self_returns.loc[common_dates]
+                    aligned_other = other_returns.loc[common_dates]
+                else:
+                    return 0.0
+            else:
+                aligned_self = self_filled[valid_mask]
+                aligned_other = other_filled[valid_mask]
+        else:
+            # Si hay suficientes fechas comunes, usar intersección directa (más preciso)
+            aligned_self = self_returns.loc[common_dates]
+            aligned_other = other_returns.loc[common_dates]
+        
+        # Calcular correlación
+        if len(aligned_self) < 2:
             return 0.0
         
-        aligned_self = self_returns.loc[common_dates]
-        aligned_other = other_returns.loc[common_dates]
-        
         correlation = aligned_self.corr(aligned_other)
-        return float(correlation) if not np.isnan(correlation) else 0.0
+        
+        # Si la correlación es NaN (por ejemplo, si una serie es constante), retornar 0
+        if np.isnan(correlation):
+            return 0.0
+        
+        return float(correlation)
     
     def get_summary_stats(self) -> dict:
         """

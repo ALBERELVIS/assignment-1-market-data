@@ -842,6 +842,7 @@ class DataExtractor:
         from .data_cleaning import force_naive_datetime_index
         
         results = {}
+        failed_symbols = []
         for symbol in symbols:
             try:
                 # Descargar datos históricos
@@ -852,6 +853,12 @@ class DataExtractor:
                     period=period,
                     source=source
                 )
+                
+                # Validar que se descargaron datos
+                if data is None or len(data.date) == 0:
+                    print(f"⚠️  Advertencia: {symbol} no tiene datos disponibles")
+                    failed_symbols.append(symbol)
+                    continue
                 
                 # NORMALIZACIÓN INTEGRAL: Asegurar que TODOS los índices estén sin timezone
                 # Esto es crítico cuando se mezclan índices (^IBEX) con activos (AAPL)
@@ -891,10 +898,23 @@ class DataExtractor:
                     normalized_data.date = force_naive_datetime_index(normalized_data.date)
                 
                 results[symbol.upper()] = normalized_data
+                print(f"✓ {symbol}: {len(normalized_data.date)} días de datos descargados")
                 
             except Exception as e:
-                print(f"Error descargando {symbol}: {str(e)}")
+                print(f"❌ Error descargando {symbol}: {str(e)}")
+                failed_symbols.append(symbol)
+                import traceback
+                traceback.print_exc()
                 continue
+        
+        # Mostrar resumen de descarga
+        if failed_symbols:
+            print(f"\n⚠️  Advertencia: {len(failed_symbols)} de {len(symbols)} activos no se pudieron descargar:")
+            for sym in failed_symbols:
+                print(f"   - {sym}")
+            print(f"\n✅ {len(results)} de {len(symbols)} activos descargados exitosamente")
+        else:
+            print(f"\n✅ Todos los {len(results)} activos descargados exitosamente")
         
         # Verificación final: asegurar que TODAS las series en el diccionario tengan índices naive
         # Esto es una capa adicional de seguridad para evitar problemas al usar estas series juntas

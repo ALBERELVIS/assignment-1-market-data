@@ -6,6 +6,7 @@ Permite al usuario extraer datos de forma interactiva desde cualquier API
 import sys
 from pathlib import Path
 from datetime import datetime
+import numpy as np
 
 # Agregar el directorio raíz al path para importar install_dependencies
 project_root = Path(__file__).parent.parent
@@ -560,13 +561,45 @@ def analisis_completo(extractor: DataExtractor):
         
         print(f"\n✅ {len(data_dict)} series descargadas")
         
+        # Validar que se descargaron datos
+        if len(data_dict) == 0:
+            print("\n❌ Error: No se pudieron descargar datos para ningún símbolo")
+            return None
+        
+        # Verificar si algunos símbolos no se descargaron
+        downloaded_symbols = list(data_dict.keys())
+        if len(downloaded_symbols) < len(symbols):
+            missing = set(symbols) - set(downloaded_symbols)
+            print(f"\n⚠️  Advertencia: {len(missing)} de {len(symbols)} símbolos no se descargaron: {', '.join(missing)}")
+            print(f"   Continuando con {len(downloaded_symbols)} símbolos descargados exitosamente")
+        
         # Convertir a PriceSeries (mostrando que estadísticas se calculan automáticamente)
         print("\n📊 Creando series de precios con estadísticas automáticas...")
         price_series_list = []
         for symbol, standardized_data in data_dict.items():
-            ps = PriceSeries.from_standardized_data(standardized_data)
-            price_series_list.append(ps)
-            print(f"   ✓ {symbol}: Media=${ps.mean_price:.2f}, Std=${ps.std_price:.2f}")
+            try:
+                ps = PriceSeries.from_standardized_data(standardized_data)
+                price_series_list.append(ps)
+                print(f"   ✓ {symbol}: Media=${ps.mean_price:.2f}, Std=${ps.std_price:.2f}, Días={len(ps)}")
+            except Exception as e:
+                print(f"   ❌ Error creando PriceSeries para {symbol}: {e}")
+                # Remover del diccionario si falla
+                data_dict.pop(symbol, None)
+        
+        # Validar que tenemos al menos una serie
+        if len(price_series_list) == 0:
+            print("\n❌ Error: No se pudieron crear series de precios para ningún símbolo")
+            return None
+        
+        # Asegurar que symbols y price_series estén alineados
+        final_symbols = list(data_dict.keys())
+        if len(final_symbols) != len(price_series_list):
+            print(f"\n⚠️  Advertencia: Desalineación detectada. Símbolos: {len(final_symbols)}, Series: {len(price_series_list)}")
+            # Usar solo los que coinciden
+            n_assets = min(len(final_symbols), len(price_series_list))
+            final_symbols = final_symbols[:n_assets]
+            price_series_list = price_series_list[:n_assets]
+            print(f"   Ajustado a {n_assets} activos")
         
         # Crear portfolio
         print("\n💼 Creando portfolio...")
@@ -574,25 +607,26 @@ def analisis_completo(extractor: DataExtractor):
         use_weights = input().strip().lower() == 's'
         
         if use_weights:
-            print(f"Ingresa pesos para {len(symbols)} activos (separados por comas, deben sumar 1.0):")
+            print(f"Ingresa pesos para {len(final_symbols)} activos (separados por comas, deben sumar 1.0):")
+            print(f"   Activos: {', '.join(final_symbols)}")
             weights_input = input("Pesos: ").strip()
             try:
                 weights = [float(w.strip()) for w in weights_input.split(",")]
-                if len(weights) != len(symbols):
-                    raise ValueError("Número de pesos incorrecto")
-            except:
-                print("⚠️  Error en pesos. Usando distribución equitativa.")
+                if len(weights) != len(final_symbols):
+                    raise ValueError(f"Número de pesos ({len(weights)}) no coincide con número de activos ({len(final_symbols)})")
+            except Exception as e:
+                print(f"⚠️  Error en pesos: {e}. Usando distribución equitativa.")
                 weights = None
         else:
             weights = None
         
         portfolio = Portfolio(
-            symbols=list(data_dict.keys()),
+            symbols=final_symbols,
             price_series=price_series_list,
             weights=weights
         )
         
-        print(f"   ✓ Portfolio creado con {len(portfolio.symbols)} activos")
+        print(f"\n   ✓ Portfolio creado con {len(portfolio.symbols)} activos")
         for i, symbol in enumerate(portfolio.symbols):
             print(f"      - {symbol}: {portfolio.weights[i]*100:.1f}%")
         
@@ -600,7 +634,9 @@ def analisis_completo(extractor: DataExtractor):
         print("\n📄 Generando reporte...")
         report = portfolio.report(include_warnings=True, include_correlation=True)
         
-        filename = "portfolio_report.md"
+        # Asegurar que la carpeta plots existe
+        Path("plots").mkdir(exist_ok=True)
+        filename = "plots/portfolio_report.md"
         with open(filename, "w", encoding="utf-8") as f:
             f.write(report)
         print(f"   ✓ Reporte guardado en '{filename}'")
@@ -686,12 +722,37 @@ def crear_cartera_personalizada(extractor: DataExtractor):
         
         print(f"\n✅ {len(data_dict)} series descargadas exitosamente")
         
+        # Verificar si algunos símbolos no se descargaron
+        downloaded_symbols = list(data_dict.keys())
+        if len(downloaded_symbols) < len(symbols):
+            missing = set(symbols) - set(downloaded_symbols)
+            print(f"\n⚠️  Advertencia: {len(missing)} de {len(symbols)} símbolos no se descargaron: {', '.join(missing)}")
+            print(f"   Continuando con {len(downloaded_symbols)} símbolos descargados exitosamente")
+        
         # Convertir a PriceSeries
         price_series_list = []
+        final_symbols = []
         for symbol, data in data_dict.items():
-            ps = PriceSeries.from_standardized_data(data)
-            price_series_list.append(ps)
-            print(f"   ✓ {symbol}: {len(ps)} días de datos")
+            try:
+                ps = PriceSeries.from_standardized_data(data)
+                price_series_list.append(ps)
+                final_symbols.append(symbol)
+                print(f"   ✓ {symbol}: {len(ps)} días de datos")
+            except Exception as e:
+                print(f"   ❌ Error creando PriceSeries para {symbol}: {e}")
+        
+        # Validar que tenemos al menos una serie
+        if len(price_series_list) == 0:
+            print("\n❌ Error: No se pudieron crear series de precios para ningún símbolo")
+            return None
+        
+        # Asegurar que symbols y price_series estén alineados
+        if len(final_symbols) != len(price_series_list):
+            print(f"\n⚠️  Advertencia: Desalineación detectada. Símbolos: {len(final_symbols)}, Series: {len(price_series_list)}")
+            n_assets = min(len(final_symbols), len(price_series_list))
+            final_symbols = final_symbols[:n_assets]
+            price_series_list = price_series_list[:n_assets]
+            print(f"   Ajustado a {n_assets} activos")
         
         # Configurar pesos de la cartera
         print("\n💼 Configuración de pesos de la cartera:")
@@ -723,9 +784,15 @@ def crear_cartera_personalizada(extractor: DataExtractor):
                 print(f"   ⚠️  Error en pesos: {e}. Usando distribución equitativa.")
                 weights = None
         
+        # Configurar valor inicial de la cartera
+        print("\n💰 Valor inicial de la cartera:")
+        print("   Ingresa el valor inicial que quieres usar para la simulación.")
+        print("   (Dejar vacío para usar el valor actual calculado)")
+        initial_value_input = input("   Valor inicial ($, Enter para usar valor actual): ").strip()
+        
         # Crear portfolio
         portfolio = Portfolio(
-            symbols=list(data_dict.keys()),
+            symbols=final_symbols,
             price_series=price_series_list,
             weights=weights
         )
@@ -736,95 +803,162 @@ def crear_cartera_personalizada(extractor: DataExtractor):
         
         portfolio_value = portfolio.get_portfolio_value_series()
         current_value = portfolio_value.iloc[-1]
-        print(f"\n   Valor actual del portfolio: ${current_value:.2f}")
         
-        # Simulación Monte Carlo
+        # Determinar valor inicial a usar
+        if initial_value_input:
+            try:
+                initial_value = float(initial_value_input)
+                print(f"\n   Valor inicial especificado: ${initial_value:,.2f}")
+            except ValueError:
+                print(f"   ⚠️  Valor inválido, usando valor actual: ${current_value:.2f}")
+                initial_value = current_value
+        else:
+            initial_value = current_value
+            print(f"\n   Valor actual del portfolio: ${current_value:.2f}")
+        
+        # Simulación Monte Carlo estilo Portfolio Visualizer
         print("\n🎲 SIMULACIÓN MONTE CARLO")
         print("\n¿Quieres ejecutar una simulación Monte Carlo? (s/n, Enter para sí): ", end="")
         run_mc = input().strip().lower() != 'n'
         
         if run_mc:
-            print("\nConfiguración de la simulación:")
+            print("\n📋 Configuración de la simulación:")
             
-            # Días a simular
-            days_input = input("   Días a simular (Enter para 252 = 1 año): ").strip()
-            days = int(days_input) if days_input.isdigit() else 252
+            # Tipo de simulación: cartera completa o activos individuales
+            print("\n   Tipo de simulación:")
+            print("   1. Cartera completa (simula el portfolio como un todo)")
+            print("   2. Activos individuales (simula cada activo por separado)")
+            
+            sim_type_choice = input("   Opción (1 o 2, Enter para cartera completa): ").strip()
+            sim_type = "individual" if sim_type_choice == "2" else "portfolio"
+            
+            # Años a simular
+            years_input = input("\n   Años a simular (Enter para 10 años): ").strip()
+            years = int(years_input) if years_input.isdigit() else 10
             
             # Número de simulaciones
-            sims_input = input("   Número de simulaciones (Enter para 1000): ").strip()
-            simulations = int(sims_input) if sims_input.isdigit() else 1000
+            sims_input = input("   Número de simulaciones (Enter para 10,000): ").strip()
+            simulations = int(sims_input) if sims_input.isdigit() else 10000
             
-            # Tipo de simulación
-            print("\n   Tipo de simulación:")
-            print("   1. Portfolio completo (simulación conjunta)")
-            print("   2. Activos individuales (simulación por componente)")
-            print("   3. Ambos")
+            # Ajuste por inflación
+            print("\n   ¿Ajustar por inflación?")
+            print("   (Ajusta los retornos futuros considerando inflación anual)")
+            inflation_choice = input("   Ajustar por inflación? (s/n, Enter para no): ").strip().lower()
+            use_inflation = inflation_choice == 's'
+            inflation_rate = 0.0
+            if use_inflation:
+                inflation_input = input("   Tasa de inflación anual (% por defecto 2.5%): ").strip()
+                try:
+                    inflation_rate = float(inflation_input) / 100 if inflation_input else 0.025
+                except ValueError:
+                    inflation_rate = 0.025  # 2.5% por defecto
+                print(f"   Tasa de inflación: {inflation_rate*100:.2f}% anual")
             
-            sim_type = input("   Opción (1, 2 o 3, Enter para portfolio completo): ").strip()
-            if not sim_type:
-                sim_type = "1"
-            
-            # Distribución
-            print("\n   Distribución para la simulación:")
-            print("   1. Normal (por defecto)")
-            print("   2. Student-t (colas pesadas)")
-            print("   3. Log-normal")
-            
-            dist_choice = input("   Opción (1, 2 o 3, Enter para normal): ").strip()
-            distribution_map = {"1": "normal", "2": "student_t", "3": "lognormal"}
-            distribution = distribution_map.get(dist_choice, "normal")
-            
-            # Ejecutar simulaciones
-            if sim_type in ["1", "3"]:
-                print(f"\n📊 Ejecutando simulación Monte Carlo del portfolio completo...")
-                print(f"   Días: {days}, Simulaciones: {simulations}, Distribución: {distribution}")
+            # Reequilibrio (solo para cartera completa)
+            rebalance = False
+            rebalance_frequency = 'monthly'
+            if sim_type == "portfolio":
+                print("\n   ¿Reequilibrar el portfolio periódicamente?")
+                print("   (Reequilibrar mantiene los pesos iniciales, reduce dispersión)")
+                rebalance_choice = input("   Reequilibrar? (s/n, Enter para sí): ").strip().lower()
+                rebalance = rebalance_choice != 'n'
                 
-                sim_df = portfolio.monte_carlo_simulation(
-                    days=days,
+                if rebalance:
+                    print("\n   Frecuencia de reequilibrio:")
+                    print("   1. Mensual (por defecto)")
+                    print("   2. Trimestral")
+                    print("   3. Anual")
+                    freq_choice = input("   Opción (1, 2 o 3, Enter para mensual): ").strip()
+                    freq_map = {"1": "monthly", "2": "quarterly", "3": "yearly"}
+                    rebalance_frequency = freq_map.get(freq_choice, "monthly")
+            
+            # Ejecutar simulación según el tipo elegido
+            if sim_type == "portfolio":
+                # Simulación de cartera completa
+                print(f"\n📊 Ejecutando simulación Monte Carlo - CARTERA COMPLETA...")
+                print(f"   Período: {years} años")
+                print(f"   Simulaciones: {simulations:,}")
+                print(f"   Reequilibrio: {'Sí' if rebalance else 'No'}")
+                if rebalance:
+                    print(f"   Frecuencia: {rebalance_frequency}")
+                
+                # Ejecutar simulación con la nueva función simplificada
+                sim_df = portfolio.run_and_plot_monte_carlo(
+                    years=years,
                     simulations=simulations,
-                    distribution=distribution,
-                    random_seed=42
-                )
-                
-                print("   ✅ Simulación completada")
-                
-                # Visualizar resultados
-                print("\n   Generando visualización...")
-                portfolio.plot_monte_carlo_results(
-                    sim_df,
-                    title=f"Simulación Monte Carlo - Portfolio Completo ({days} días)",
-                    initial_value=100.0,  # Valor normalizado
+                    initial_value=initial_value,
+                    inflation_rate=inflation_rate if use_inflation else None,
+                    rebalance=rebalance,
+                    rebalance_frequency=rebalance_frequency,
+                    random_seed=42,
                     save_path="plots/monte_carlo_portfolio.png"
                 )
-                print("   ✅ Gráfico guardado en 'plots/monte_carlo_portfolio.png'")
-            
-            if sim_type in ["2", "3"]:
-                print(f"\n📊 Ejecutando simulaciones Monte Carlo de activos individuales...")
-                print(f"   Días: {days}, Simulaciones: {simulations}, Distribución: {distribution}")
                 
-                sim_dict = portfolio.monte_carlo_individual_assets(
-                    days=days,
+                print("\n   ✅ Simulación completada y visualización generada")
+                
+                # Calcular y mostrar estadísticas adicionales
+                print("\n📈 Estadísticas de la simulación:")
+                final_values = sim_df.iloc[-1].values
+                returns = (final_values - initial_value) / initial_value
+                
+                print(f"   - Valor esperado: ${np.mean(final_values):,.2f}")
+                print(f"   - Mediana: ${np.median(final_values):,.2f}")
+                print(f"   - Retorno esperado: {returns.mean()*100:.2f}%")
+                print(f"   - Probabilidad de ganancia: {(returns > 0).sum() / len(returns)*100:.1f}%")
+                print(f"   - Probabilidad de pérdida: {(returns < 0).sum() / len(returns)*100:.1f}%")
+                print(f"\n   📊 Percentiles:")
+                print(f"   - P5: ${np.percentile(final_values, 5):,.2f}")
+                print(f"   - P50: ${np.percentile(final_values, 50):,.2f}")
+                print(f"   - P95: ${np.percentile(final_values, 95):,.2f}")
+                
+                # Generar gráficos adicionales de análisis
+                print("\n📊 Generando gráficos adicionales de análisis...")
+                portfolio.plot_portfolio_analysis(
+                    sim_df,
+                    initial_value=initial_value,
+                    save_dir="plots"
+                )
+            else:
+                # Simulación de activos individuales
+                print(f"\n📊 Ejecutando simulación Monte Carlo - ACTIVOS INDIVIDUALES...")
+                print(f"   Período: {years} años")
+                print(f"   Simulaciones: {simulations:,}")
+                print(f"   Activos: {', '.join(portfolio.symbols)}")
+                
+                # Ejecutar simulación de activos individuales
+                sim_dict = portfolio.run_and_plot_monte_carlo_individual_assets(
+                    years=years,
                     simulations=simulations,
-                    distribution=distribution,
-                    random_seed=42
+                    inflation_rate=inflation_rate if use_inflation else None,
+                    random_seed=42,
+                    save_path="plots/monte_carlo_individual_assets.png"
                 )
                 
-                print("   ✅ Simulaciones completadas")
+                print("\n   ✅ Simulación completada y visualización generada")
                 
-                # Visualizar resultados
-                print("\n   Generando visualización...")
-                portfolio.plot_monte_carlo_individual(
-                    sim_dict,
-                    save_path="plots/monte_carlo_individual.png",
-                    show_combined=True
-                )
-                print("   ✅ Gráfico guardado en 'plots/monte_carlo_individual.png'")
+                # Mostrar estadísticas por activo
+                print("\n📈 Estadísticas por activo:")
+                for symbol, sim_df in sim_dict.items():
+                    final_values = sim_df.iloc[-1].values
+                    initial_asset_value = sim_df.iloc[0, 0]  # Valor inicial normalizado (100)
+                    returns = (final_values - initial_asset_value) / initial_asset_value
+                    
+                    print(f"\n   {symbol}:")
+                    print(f"   - Valor esperado: ${np.mean(final_values):,.2f}")
+                    print(f"   - Mediana: ${np.median(final_values):,.2f}")
+                    print(f"   - Retorno esperado: {returns.mean()*100:.2f}%")
+                    print(f"   - Probabilidad de ganancia: {(returns > 0).sum() / len(returns)*100:.1f}%")
+                    print(f"   - P5: ${np.percentile(final_values, 5):,.2f}")
+                    print(f"   - P50: ${np.percentile(final_values, 50):,.2f}")
+                    print(f"   - P95: ${np.percentile(final_values, 95):,.2f}")
         
         # Generar reporte
         print("\n📄 Generando reporte del portfolio...")
         report = portfolio.report(include_warnings=True, include_correlation=True)
         
-        filename = "portfolio_report.md"
+        # Asegurar que la carpeta plots existe
+        Path("plots").mkdir(exist_ok=True)
+        filename = "plots/portfolio_report.md"
         with open(filename, "w", encoding="utf-8") as f:
             f.write(report)
         print(f"   ✅ Reporte guardado en '{filename}'")
