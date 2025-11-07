@@ -65,40 +65,22 @@ Este proyecto implementa un sistema modular y extensible para:
 
 ## 🚀 Instalación
 
-### Paso 1: Clonar o Descargar el Repositorio
+### Instalación Rápida
+
+**¡Es muy simple!** Solo necesitas:
+
+1. **Descargar el repositorio** (clonar o descargar como ZIP)
+2. **Ejecutar el script principal** - Las dependencias se instalan automáticamente
 
 ```bash
-git clone <url-del-repositorio>
-cd assignment-1-market-data-Improvements-Montecarlo
+python run_main.py
 ```
 
-### Paso 2: Crear Entorno Virtual (Recomendado)
+El script se encargará automáticamente de instalar todas las dependencias necesarias si no están ya instaladas.
 
-```bash
-python -m venv venv
-```
+### Configurar API Keys (Opcional)
 
-**Activar entorno virtual:**
-
-- Windows (PowerShell): `.\venv\Scripts\Activate.ps1`
-- Windows (CMD): `venv\Scripts\activate.bat`
-- Linux/Mac: `source venv/bin/activate`
-
-### Paso 3: Instalar Dependencias
-
-```bash
-pip install -r requirements.txt
-```
-
-O usar el script de instalación automática:
-
-```bash
-python install_dependencies.py
-```
-
-### Paso 4: Configurar API Keys (Opcional)
-
-Crea un archivo `config.json` en la raíz del proyecto:
+Para acceder a algunas fuentes de datos adicionales (FRED, Alpha Vantage), puedes configurar API keys opcionales creando un archivo `config.json` en la raíz del proyecto:
 
 ```json
 {
@@ -107,7 +89,9 @@ Crea un archivo `config.json` en la raíz del proyecto:
 }
 ```
 
-**Nota:** Los archivos de configuración están en `.gitignore` para proteger tus API keys.
+**Nota:** 
+- Los archivos de configuración están en `.gitignore` para proteger tus API keys.
+- Las API keys son **opcionales** - el sistema funciona sin ellas usando fuentes gratuitas como Yahoo Finance y Stooq.
 
 ---
 
@@ -370,20 +354,16 @@ Para un diagrama detallado de clases e interacciones, consulta [DIAGRAMA_CLASES.
 
 ### Ejecución Básica
 
-**Opción 1: Script interactivo (recomendado)**
+**Ejecutar el script principal (recomendado):**
 ```bash
 python run_main.py
 ```
 
-**Opción 2: Como módulo**
+Este script instala automáticamente las dependencias si es necesario y ejecuta el programa de forma interactiva.
+
+**Alternativa: Ejecutar como módulo**
 ```bash
 python -m src.main
-```
-
-**Opción 3: Desde el directorio src**
-```bash
-cd src
-python main.py
 ```
 
 ### Uso Programático
@@ -664,6 +644,8 @@ stats = ps.get_summary_stats()
 ### Error: "ModuleNotFoundError: No module named 'yfinance'"
 
 **Solución:**
+Ejecuta `python run_main.py` nuevamente - el script instalará automáticamente las dependencias faltantes. Si el problema persiste, puedes instalar manualmente:
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -718,7 +700,7 @@ pip install --upgrade matplotlib seaborn
 
 Si encuentras problemas:
 1. Revisa la sección [Troubleshooting](#troubleshooting)
-2. Verifica que todas las dependencias estén instaladas
+2. Ejecuta `python run_main.py` - las dependencias se instalan automáticamente
 3. Asegúrate de tener Python 3.8+
 4. Comprueba tu conexión a Internet
 
