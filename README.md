@@ -714,6 +714,4 @@ Este proyecto es para uso educativo/académico.
 
 ---
 
-**¡Éxito con tu proyecto! 🚀**
-
 
