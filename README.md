@@ -1,4 +1,4 @@
-# 📊 Sistema de Análisis Bursátil - Trabajo Final
+# 📊 Sistema de Análisis Bursátil - BLOQUE 1 MIAX
 
 Sistema completo de herramientas para la obtención y análisis de información financiera y bursátil. Este proyecto implementa un conjunto de módulos para descargar datos históricos desde múltiples fuentes, crear portfolios, realizar análisis estadísticos, simulaciones de Monte Carlo y generar reportes visuales.
 
@@ -713,3 +713,4 @@ Este proyecto es para uso educativo/académico.
 ---
 
 **¡Éxito con tu proyecto! 🚀**
+
