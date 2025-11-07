@@ -10,7 +10,96 @@ from typing import Union, Optional, Dict, List
 from datetime import datetime
 import warnings
 
-from .price_series import PriceSeries
+# PriceSeries se importa solo cuando es necesario para evitar dependencia circular con scipy
+
+
+def force_naive_datetime_index(dt_index) -> pd.DatetimeIndex:
+    """
+    SOLUCIÓN INTEGRAL: Fuerza la conversión de un DatetimeIndex a naive (sin timezone)
+    Usa numpy directamente para garantizar que NUNCA falle
+    Esta función es CRÍTICA cuando se mezclan índices con activos porque pueden tener
+    diferentes timezones y pandas falla al alinearlos
+    
+    Args:
+        dt_index: DatetimeIndex o cualquier objeto que pueda convertirse a fechas
+    
+    Returns:
+        DatetimeIndex completamente naive (sin timezone)
+    """
+    # Si es None o está vacío, devolver un DatetimeIndex vacío
+    if dt_index is None or (hasattr(dt_index, '__len__') and len(dt_index) == 0):
+        return pd.DatetimeIndex([])
+    
+    # Si ya es un DatetimeIndex sin timezone, verificar y devolverlo
+    if isinstance(dt_index, pd.DatetimeIndex):
+        if dt_index.tz is None:
+            # Aún así, recrear usando numpy para asegurar que esté completamente limpio
+            try:
+                numpy_values = dt_index.values.astype('datetime64[ns]')
+                return pd.DatetimeIndex(numpy_values)
+            except:
+                return dt_index
+        else:
+            # Si tiene timezone, convertir a numpy inmediatamente
+            # Esto elimina completamente el timezone
+            try:
+                numpy_values = dt_index.values.astype('datetime64[ns]')
+                return pd.DatetimeIndex(numpy_values)
+            except:
+                # Si falla, intentar quitar timezone manualmente
+                try:
+                    return dt_index.tz_localize(None)
+                except:
+                    return dt_index.tz_convert(None).tz_localize(None)
+    
+    # Convertir a DatetimeIndex si no lo es
+    try:
+        dt_index = pd.to_datetime(dt_index)
+    except Exception as e:
+        raise ValueError(f"No se pudo convertir a DatetimeIndex: {type(dt_index)} - {e}")
+    
+    # Si el resultado tiene timezone, usar numpy directamente
+    if isinstance(dt_index, pd.DatetimeIndex):
+        if dt_index.tz is not None:
+            # Convertir directamente a numpy datetime64[ns] (que es naive por defecto)
+            try:
+                numpy_values = dt_index.values.astype('datetime64[ns]')
+                return pd.DatetimeIndex(numpy_values)
+            except:
+                # Si falla con numpy, intentar métodos de pandas
+                try:
+                    return dt_index.tz_localize(None)
+                except:
+                    return dt_index.tz_convert(None).tz_localize(None)
+        else:
+            # Si no tiene timezone pero es DatetimeIndex, asegurar que esté normalizado
+            # Convertir a numpy y volver a crear para asegurar que esté completamente naive
+            try:
+                numpy_values = dt_index.values.astype('datetime64[ns]')
+                return pd.DatetimeIndex(numpy_values)
+            except:
+                return dt_index
+    
+    # Si es un Timestamp individual o similar, convertir a lista y procesar
+    if hasattr(dt_index, 'tz') and dt_index.tz is not None:
+        # Es un Timestamp con timezone, convertir a naive
+        try:
+            if isinstance(dt_index, pd.Timestamp):
+                # Es un solo Timestamp
+                return pd.DatetimeIndex([dt_index.tz_localize(None)])
+            else:
+                # Es una lista o array de Timestamps
+                return pd.DatetimeIndex([d.tz_localize(None) if hasattr(d, 'tz_localize') else d for d in dt_index])
+        except:
+            pass
+    
+    # Último recurso: convertir a numpy directamente
+    try:
+        numpy_values = np.array(dt_index, dtype='datetime64[ns]')
+        return pd.DatetimeIndex(numpy_values)
+    except:
+        # Si todo falla, intentar crear desde cero
+        return pd.DatetimeIndex(pd.to_datetime(dt_index).tz_localize(None) if hasattr(pd.to_datetime(dt_index), 'tz') else pd.to_datetime(dt_index))
 
 
 class DataCleaner:
@@ -184,7 +273,7 @@ class DataCleaner:
     def create_price_series_from_data(data: Union[pd.DataFrame, dict, list],
                                      symbol: str,
                                      source: str = "custom",
-                                     clean: bool = True) -> PriceSeries:
+                                     clean: bool = True):
         """
         Crea una PriceSeries desde datos en cualquier formato
         
@@ -197,6 +286,8 @@ class DataCleaner:
         Returns:
             PriceSeries
         """
+        # Importar PriceSeries aquí para evitar dependencia circular con scipy
+        from .price_series import PriceSeries
         # Detectar y convertir formato
         format_type = DataCleaner.detect_data_format(data)
         
@@ -238,7 +329,7 @@ class DataCleaner:
         )
     
     @staticmethod
-    def validate_price_series(ps: PriceSeries) -> Dict[str, bool]:
+    def validate_price_series(ps) -> Dict[str, bool]:
         """
         Valida que una PriceSeries tenga datos coherentes
         
@@ -248,6 +339,8 @@ class DataCleaner:
         Returns:
             Diccionario con resultados de validación
         """
+        # Importar PriceSeries aquí para evitar dependencia circular con scipy
+        from .price_series import PriceSeries
         validation = {
             'has_data': len(ps) > 0,
             'has_dates': len(ps.date) > 0,

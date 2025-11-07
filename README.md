@@ -1,26 +1,27 @@
-# 📊 Sistema de Análisis Bursátil
+# 📊 Sistema de Análisis Bursátil - Trabajo Final
 
-Sistema completo de herramientas para la obtención y análisis de información financiera y bursátil. Este proyecto implementa un conjunto de módulos para descargar datos históricos, crear portfolios, realizar análisis estadísticos, simulaciones de Monte Carlo y generar reportes visuales.
+Sistema completo de herramientas para la obtención y análisis de información financiera y bursátil. Este proyecto implementa un conjunto de módulos para descargar datos históricos desde múltiples fuentes, crear portfolios, realizar análisis estadísticos, simulaciones de Monte Carlo y generar reportes visuales.
 
 ## 📋 Tabla de Contenidos
 
 1. [Descripción del Proyecto](#descripción-del-proyecto)
 2. [Estructura del Proyecto](#estructura-del-proyecto)
 3. [Requisitos Previos](#requisitos-previos)
-4. [Instalación Paso a Paso](#instalación-paso-a-paso)
-5. [Uso del Sistema](#uso-del-sistema)
-6. [Características Principales](#características-principales)
-7. [Documentación de Módulos](#documentación-de-módulos)
-8. [Ejemplos de Uso](#ejemplos-de-uso)
-9. [Troubleshooting](#troubleshooting)
+4. [Instalación](#instalación)
+5. [Funcionalidades Principales](#funcionalidades-principales)
+6. [Arquitectura y Diseño](#arquitectura-y-diseño)
+7. [Uso del Sistema](#uso-del-sistema)
+8. [Respuestas a Preguntas del Trabajo](#respuestas-a-preguntas-del-trabajo)
+9. [Ejemplos de Uso](#ejemplos-de-uso)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
 ## 🎯 Descripción del Proyecto
 
-Este proyecto implementa un sistema modular para:
+Este proyecto implementa un sistema modular y extensible para:
 
-- **Extracción de datos**: Descarga de información histórica de precios desde múltiples fuentes (APIs)
+- **Extracción de datos**: Descarga de información histórica de precios desde múltiples fuentes (Yahoo Finance, FRED, Stooq, Alpha Vantage)
 - **Estandarización**: Formato unificado independientemente de la fuente de datos
 - **Análisis estadístico**: Cálculo automático de métricas (media, desviación, volatilidad, Sharpe, etc.)
 - **Portfolio Management**: Creación y gestión de carteras con múltiples activos
@@ -37,153 +38,91 @@ Este proyecto implementa un sistema modular para:
 ├── src/                          # Código fuente principal
 │   ├── __init__.py              # Inicialización del módulo
 │   ├── data_extractor.py        # Extractor de datos desde APIs
+│   ├── api_adapters.py          # Adaptadores para FRED, Stooq, Alpha Vantage
+│   ├── config_manager.py        # Gestión de API keys y configuración
 │   ├── price_series.py           # DataClass para series de precios
 │   ├── portfolio.py             # Clase Portfolio con métodos de análisis
 │   ├── data_cleaning.py         # Limpieza y preprocesado de datos
-│   └── main.py                  # Script principal de demostración
+│   ├── price_plots.py           # Funciones de visualización
+│   └── main.py                  # Script principal interactivo
+├── tests/                        # Tests unitarios
+├── docs/                         # Documentación adicional
 ├── requirements.txt             # Dependencias del proyecto
-├── .gitignore                   # Archivos a ignorar en Git
-├── README.md                    # Este archivo
-├── example_usage.py             # Ejemplos de uso adicionales
-└── portfolio_report.md          # Reporte generado (se crea al ejecutar)
+├── config.example.json          # Ejemplo de configuración
+├── run_main.py                  # Script auxiliar para ejecución
+└── README.md                    # Este archivo
 ```
 
 ---
 
 ## ✅ Requisitos Previos
 
-Antes de comenzar, necesitas tener instalado:
-
-1. **Python 3.8 o superior**
-   - Verifica tu versión: Abre la terminal y escribe `python --version`
-   - Si no tienes Python, descárgalo de [python.org](https://www.python.org/downloads/)
-
-2. **Conexión a Internet**
-   - Necesaria para descargar datos de APIs financieras
-
-3. **Cuenta de GitHub** (ya la tienes según mencionaste)
+- **Python 3.8 o superior**
+- **Conexión a Internet** (necesaria para descargar datos de APIs financieras)
+- **API Keys opcionales** (algunas fuentes requieren API keys gratuitas)
 
 ---
 
-## 🚀 Instalación Paso a Paso
+## 🚀 Instalación
 
 ### Paso 1: Clonar o Descargar el Repositorio
 
-Si tienes el repositorio en GitHub:
+```bash
+git clone <url-del-repositorio>
+cd assignment-1-market-data-Improvements-Montecarlo
+```
 
-1. Ve a tu repositorio en GitHub
-2. Haz clic en el botón verde **"Code"**
-3. Selecciona **"Download ZIP"**
-4. Extrae el archivo ZIP en tu computadora
-
-**O si prefieres usar GitHub Desktop o la interfaz web:**
-
-- Puedes crear/editar archivos directamente desde GitHub web
-
-### Paso 2: Instalar Python (si no lo tienes)
-
-1. Ve a [python.org/downloads](https://www.python.org/downloads/)
-2. Descarga la versión más reciente para Windows
-3. Durante la instalación, **marca la casilla "Add Python to PATH"**
-4. Haz clic en "Install Now"
-
-### Paso 3: Abrir Terminal en la Carpeta del Proyecto
-
-1. Abre el Explorador de Archivos de Windows
-2. Navega hasta la carpeta del proyecto
-3. Haz clic en la barra de direcciones y escribe: `cmd` y presiona Enter
-   - Esto abrirá la terminal en esa ubicación
-
-### Paso 4: Crear Entorno Virtual (Recomendado)
+### Paso 2: Crear Entorno Virtual (Recomendado)
 
 ```bash
 python -m venv venv
 ```
 
-Luego activar el entorno virtual:
+**Activar entorno virtual:**
 
-**En Windows (PowerShell):**
-```powershell
-.\venv\Scripts\Activate.ps1
-```
+- Windows (PowerShell): `.\venv\Scripts\Activate.ps1`
+- Windows (CMD): `venv\Scripts\activate.bat`
+- Linux/Mac: `source venv/bin/activate`
 
-**En Windows (CMD):**
-```cmd
-venv\Scripts\activate.bat
-```
-
-Verás que aparece `(venv)` al inicio de la línea de comandos.
-
-### Paso 5: Instalar Dependencias
-
-Con el entorno virtual activado, ejecuta:
+### Paso 3: Instalar Dependencias
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Esto instalará todas las librerías necesarias:
-- `pandas`: Para manipulación de datos
-- `numpy`: Para cálculos numéricos
-- `yfinance`: Para descargar datos de Yahoo Finance
-- `matplotlib` y `seaborn`: Para gráficos
-- `scipy`: Para estadísticas avanzadas
-
-**Si tienes problemas**, prueba con:
+O usar el script de instalación automática:
 
 ```bash
-pip install --upgrade pip
-pip install -r requirements.txt
+python install_dependencies.py
 ```
+
+### Paso 4: Configurar API Keys (Opcional)
+
+Crea un archivo `config.json` en la raíz del proyecto:
+
+```json
+{
+  "FRED_API_KEY": "tu_fred_api_key_aqui",
+  "ALPHA_VANTAGE_API_KEY": "tu_alpha_vantage_api_key_aqui"
+}
+```
+
+**Nota:** Los archivos de configuración están en `.gitignore` para proteger tus API keys.
 
 ---
 
-## 💻 Uso del Sistema
-
-### Ejecución Básica
-
-El script principal demuestra todas las funcionalidades:
-
-**Opción 1: Usando el script auxiliar (recomendado)**
-```bash
-python run_main.py
-```
-
-**Opción 2: Como módulo**
-```bash
-python -m src.main
-```
-
-**Opción 3: Desde el directorio src**
-```bash
-cd src
-python main.py
-```
-
-Este script:
-1. Descarga datos históricos de AAPL, MSFT y GOOGL
-2. Crea series de precios con estadísticas
-3. Construye un portfolio
-4. Genera un reporte en Markdown
-5. Crea visualizaciones
-6. Ejecuta simulaciones de Monte Carlo
-
-### Uso Personalizado
-
-Puedes crear tus propios scripts. Mira `example_usage.py` para más ejemplos.
-
----
-
-## 🔧 Características Principales
+## 🔧 Funcionalidades Principales
 
 ### 1. Extractor de Datos (`data_extractor.py`)
 
 **Funcionalidades:**
-- Descarga de datos históricos de acciones e índices
-- Soporte para múltiples fuentes (Yahoo Finance, extensible)
-- Formato estandarizado independiente de la fuente
-- Descarga de múltiples series simultáneamente
-- Cache para evitar llamadas repetidas
+- ✅ Descarga de datos históricos de acciones e índices
+- ✅ Soporte para múltiples fuentes: **Yahoo Finance**, **FRED**, **Stooq**, **Alpha Vantage**
+- ✅ **Formato estandarizado** independiente de la fuente (`StandardizedPriceData`)
+- ✅ Descarga de **N series simultáneamente** mediante `download_multiple_series()`
+- ✅ Cache para evitar llamadas repetidas
+- ✅ Gestión automática de API keys (archivo de config o input del usuario)
+- ✅ Extracción de datos adicionales: noticias, recomendaciones, información de empresas
 
 **Ejemplo:**
 ```python
@@ -194,9 +133,9 @@ extractor = DataExtractor()
 # Descargar una acción
 data = extractor.download_historical_prices("AAPL", period="1y")
 
-# Descargar múltiples acciones
+# Descargar múltiples acciones simultáneamente
 data_dict = extractor.download_multiple_series(
-    symbols=["AAPL", "MSFT", "GOOGL"],
+    symbols=["AAPL", "MSFT", "GOOGL", "^GSPC"],
     period="1y"
 )
 ```
@@ -204,30 +143,27 @@ data_dict = extractor.download_multiple_series(
 ### 2. Series de Precios (`price_series.py`)
 
 **DataClass con métodos estadísticos automáticos:**
-- Media y desviación típica (calculadas automáticamente)
-- Volatilidad (anualizada)
-- Ratio de Sharpe
-- Máximo Drawdown
-- Correlación con otras series
-- Estadísticas completas (skewness, kurtosis, etc.)
+- ✅ **Media y desviación típica** (calculadas automáticamente en `__post_init__`)
+- ✅ Volatilidad (anualizada)
+- ✅ Ratio de Sharpe
+- ✅ Máximo Drawdown
+- ✅ Correlación con otras series
+- ✅ Estadísticas completas (skewness, kurtosis, etc.)
 
 **Ejemplo:**
 ```python
 from src.price_series import PriceSeries
-from src.data_extractor import DataExtractor, StandardizedPriceData
+from src.data_extractor import DataExtractor
 
 extractor = DataExtractor()
 data = extractor.download_historical_prices("AAPL", period="1y")
 ps = PriceSeries.from_standardized_data(data)
 
-# Estadísticas automáticas
-print(f"Media: ${ps.mean_price:.2f}")
+# Estadísticas automáticas (calculadas al crear el objeto)
+print(f"Media: ${ps.mean_price:.2f}")  # Calculada automáticamente
+print(f"Desviación típica: ${ps.std_price:.2f}")  # Calculada automáticamente
 print(f"Volatilidad: {ps.volatility(annualized=True)*100:.2f}%")
 print(f"Sharpe Ratio: {ps.sharpe_ratio():.3f}")
-
-# Resumen completo
-stats = ps.get_summary_stats()
-print(stats)
 ```
 
 ### 3. Portfolio (`portfolio.py`)
@@ -235,11 +171,11 @@ print(stats)
 **Una cartera es una colección de PriceSeries con pesos asociados.**
 
 **Métodos principales:**
-- `get_portfolio_value_series()`: Valor combinado de la cartera
-- `monte_carlo_simulation()`: Simulación para la cartera completa
-- `monte_carlo_individual_assets()`: Simulación por activo
-- `report()`: Genera reporte en Markdown
-- `plots_report()`: Genera visualizaciones
+- ✅ `get_portfolio_value_series()`: Valor combinado de la cartera
+- ✅ `monte_carlo_simulation()`: Simulación para la cartera completa (configurable)
+- ✅ `monte_carlo_individual_assets()`: Simulación por activo individual
+- ✅ `report()`: Genera reporte en Markdown con análisis completo
+- ✅ `plots_report()`: Genera visualizaciones profesionales
 
 **Ejemplo:**
 ```python
@@ -253,26 +189,27 @@ portfolio = Portfolio(
     weights=[0.4, 0.3, 0.3]  # 40%, 30%, 30%
 )
 
-# Generar reporte
-report = portfolio.report()
+# Generar reporte en Markdown
+report = portfolio.report(include_warnings=True, include_correlation=True)
 print(report)
 
 # Guardar reporte
-with open("mi_reporte.md", "w", encoding="utf-8") as f:
+with open("portfolio_report.md", "w", encoding="utf-8") as f:
     f.write(report)
 
 # Generar gráficos
-portfolio.plots_report(save_dir="mis_graficos")
+portfolio.plots_report(save_dir="plots")
 
-# Simulación Monte Carlo
+# Simulación Monte Carlo (configurable)
 mc_results = portfolio.monte_carlo_simulation(
-    days=252,      # 1 año
-    simulations=1000,
-    random_seed=42
+    years=10,           # Años a simular
+    simulations=10000,  # Número de simulaciones
+    initial_value=10000,  # Valor inicial
+    random_seed=42,     # Para reproducibilidad
+    rebalance=True,     # Reequilibrar periódicamente
+    rebalance_frequency='monthly',  # Frecuencia de reequilibrio
+    inflation_rate=0.025  # Ajuste por inflación (opcional)
 )
-
-# Visualizar resultados
-portfolio.plot_monte_carlo_results(mc_results)
 ```
 
 ### 4. Limpieza de Datos (`data_cleaning.py`)
@@ -280,12 +217,12 @@ portfolio.plot_monte_carlo_results(mc_results)
 **Acepta cualquier formato de entrada con serie temporal de precios.**
 
 **Funcionalidades:**
-- Detección automática de formato
-- Normalización de DataFrames
-- Eliminación de duplicados
-- Completado de valores faltantes
-- Detección y corrección de outliers
-- Validación de coherencia
+- ✅ Detección automática de formato
+- ✅ Normalización de DataFrames
+- ✅ Eliminación de duplicados
+- ✅ Completado de valores faltantes
+- ✅ Detección y corrección de outliers
+- ✅ Validación de coherencia
 
 **Ejemplo:**
 ```python
@@ -305,45 +242,326 @@ ps = cleaner.create_price_series_from_data(
 
 ---
 
-## 📚 Documentación de Módulos
+## 🏗️ Arquitectura y Diseño
 
-### DataExtractor
+Para un diagrama detallado de clases e interacciones, consulta [DIAGRAMA_CLASES.md](docs/DIAGRAMA_CLASES.md).
 
-**Métodos principales:**
-- `download_historical_prices()`: Descarga datos de una acción/índice
-- `download_multiple_series()`: Descarga N series simultáneamente
-- `download_index_data()`: Descarga datos de índices
-- `download_company_info()`: Información adicional de empresas
+### Diagrama de Clases e Interacciones (Resumen)
 
-### PriceSeries
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        DataExtractor                             │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ - download_historical_prices()                           │   │
+│  │ - download_multiple_series()                            │   │
+│  │ - download_index_data()                                 │   │
+│  │ - get_recommendations()                                  │   │
+│  │ - get_news()                                             │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                           │                                      │
+│                           │ usa                                  │
+│                           ▼                                      │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │              APISourceAdapter (Abstract)                  │   │
+│  │  ┌────────────────────────────────────────────────────┐  │   │
+│  │  │ YahooFinanceAdapter                                 │  │   │
+│  │  │ FREDAdapter                                         │  │   │
+│  │  │ StooqAdapter                                        │  │   │
+│  │  │ AlphaVantageAdapter                                 │  │   │
+│  │  │ GenericAPIAdapter                                   │  │   │
+│  │  └────────────────────────────────────────────────────┘  │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                           │                                      │
+│                           │ retorna                              │
+│                           ▼                                      │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │           StandardizedPriceData (DataClass)              │   │
+│  │  - symbol: str                                          │   │
+│  │  - date: pd.DatetimeIndex                               │   │
+│  │  - open, high, low, close, volume: pd.Series            │   │
+│  │  - source: str                                          │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ convierte a
+                                    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    PriceSeries (DataClass)                      │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ Atributos (calculados automáticamente):                  │  │
+│  │ - mean_price: float  ← calculado en __post_init__       │  │
+│  │ - std_price: float   ← calculado en __post_init__       │  │
+│  │                                                           │  │
+│  │ Métodos estadísticos:                                     │  │
+│  │ - returns() → pd.Series                                  │  │
+│  │ - volatility() → float                                   │  │
+│  │ - sharpe_ratio() → float                                 │  │
+│  │ - max_drawdown() → float                                 │  │
+│  │ - correlation_with() → float                            │  │
+│  │ - get_summary_stats() → dict                            │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ contiene múltiples
+                                    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Portfolio (DataClass)                       │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ Atributos:                                                │  │
+│  │ - symbols: List[str]                                     │  │
+│  │ - price_series: List[PriceSeries]                        │  │
+│  │ - weights: List[float]                                   │  │
+│  │                                                           │  │
+│  │ Métodos principales:                                      │  │
+│  │ - get_portfolio_value_series() → pd.Series              │  │
+│  │ - get_portfolio_returns() → pd.Series                   │  │
+│  │ - monte_carlo_simulation() → pd.DataFrame               │  │
+│  │ - monte_carlo_individual_assets() → Dict[str, DataFrame]│  │
+│  │ - report() → str (Markdown)                             │  │
+│  │ - plots_report() → None (guarda gráficos)               │  │
+│  │ - plot_monte_carlo_results() → None                    │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ usa
+                                    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    DataCleaner                                   │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ - detect_data_format() → str                             │  │
+│  │ - normalize_dataframe() → pd.DataFrame                   │  │
+│  │ - clean_price_data() → pd.DataFrame                      │  │
+│  │ - create_price_series_from_data() → PriceSeries         │  │
+│  │ - validate_price_series() → bool                        │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-**Métodos estadísticos:**
-- `returns()`: Calcula retornos (simple o logarítmicos)
-- `volatility()`: Volatilidad con ventana configurable
-- `sharpe_ratio()`: Ratio de Sharpe
-- `max_drawdown()`: Máximo drawdown
-- `correlation_with()`: Correlación con otra serie
-- `get_summary_stats()`: Diccionario completo de estadísticas
+### Flujo de Datos
 
-### Portfolio
+```
+1. Usuario solicita datos
+   │
+   ▼
+2. DataExtractor selecciona adaptador según fuente
+   │
+   ▼
+3. Adaptador descarga datos de API
+   │
+   ▼
+4. Adaptador estandariza datos → StandardizedPriceData
+   │
+   ▼
+5. StandardizedPriceData → PriceSeries (estadísticas automáticas)
+   │
+   ▼
+6. Múltiples PriceSeries → Portfolio
+   │
+   ▼
+7. Portfolio genera:
+   - Reporte Markdown (.report())
+   - Visualizaciones (.plots_report())
+   - Simulaciones Monte Carlo (.monte_carlo_simulation())
+```
 
-**Métodos de análisis:**
-- `get_portfolio_value_series()`: Valor temporal de la cartera
-- `get_portfolio_returns()`: Retornos de la cartera
-- `monte_carlo_simulation()`: Simulación Monte Carlo del portfolio
-- `monte_carlo_individual_assets()`: Simulación por activo
-- `plot_monte_carlo_results()`: Visualización de resultados
-- `report()`: Reporte en Markdown con análisis completo
-- `plots_report()`: Genera múltiples visualizaciones
+---
 
-### DataCleaner
+## 💻 Uso del Sistema
 
-**Métodos de limpieza:**
-- `detect_data_format()`: Detecta formato de entrada
-- `normalize_dataframe()`: Normaliza a formato estándar
-- `clean_price_data()`: Limpia datos (duplicados, outliers, etc.)
-- `create_price_series_from_data()`: Crea PriceSeries desde cualquier formato
-- `validate_price_series()`: Valida coherencia de datos
+### Ejecución Básica
+
+**Opción 1: Script interactivo (recomendado)**
+```bash
+python run_main.py
+```
+
+**Opción 2: Como módulo**
+```bash
+python -m src.main
+```
+
+**Opción 3: Desde el directorio src**
+```bash
+cd src
+python main.py
+```
+
+### Uso Programático
+
+```python
+from src.data_extractor import DataExtractor
+from src.price_series import PriceSeries
+from src.portfolio import Portfolio
+
+# 1. Extraer datos
+extractor = DataExtractor()
+data_dict = extractor.download_multiple_series(
+    symbols=["AAPL", "MSFT", "GOOGL"],
+    period="1y"
+)
+
+# 2. Crear series de precios (estadísticas automáticas)
+price_series = [
+    PriceSeries.from_standardized_data(data)
+    for data in data_dict.values()
+]
+
+# 3. Crear portfolio
+portfolio = Portfolio(
+    symbols=list(data_dict.keys()),
+    price_series=price_series,
+    weights=[0.4, 0.3, 0.3]
+)
+
+# 4. Generar reporte
+report = portfolio.report()
+with open("report.md", "w", encoding="utf-8") as f:
+    f.write(report)
+
+# 5. Generar visualizaciones
+portfolio.plots_report(save_dir="plots")
+
+# 6. Simulación Monte Carlo
+mc_results = portfolio.monte_carlo_simulation(
+    years=10,
+    simulations=10000
+)
+```
+
+---
+
+## 📝 Respuestas a Preguntas del Trabajo
+
+### 1. ¿Qué es una cartera?
+
+**Respuesta:** Una cartera (Portfolio) es una **colección de series de precios con pesos asociados**. Cada serie de precios representa un activo (acción o índice), y cada activo tiene un peso que indica qué porcentaje del portfolio representa.
+
+**Ejemplo:**
+- 40% Apple (AAPL)
+- 30% Microsoft (MSFT)
+- 30% Google (GOOGL)
+
+El portfolio permite analizar el comportamiento conjunto de múltiples activos, calcular métricas agregadas, y realizar simulaciones considerando las correlaciones entre activos.
+
+**Implementación:**
+```python
+@dataclass
+class Portfolio:
+    symbols: List[str]              # Símbolos de los activos
+    price_series: List[PriceSeries] # Series de precios de cada activo
+    weights: List[float]            # Pesos (porcentajes) de cada activo
+```
+
+### 2. ¿Por qué estandarizar el formato de salida?
+
+**Respuesta:** Diferentes APIs devuelven datos en formatos diferentes:
+- Yahoo Finance: DataFrame con columnas `Open`, `High`, `Low`, `Close`, `Volume`
+- FRED: JSON con estructura diferente
+- Stooq: CSV con formato propio
+- Alpha Vantage: JSON con estructura diferente
+
+Al estandarizar, el resto del código funciona igual independientemente de la fuente, facilitando:
+- ✅ Cambiar de fuente sin modificar código
+- ✅ Combinar datos de múltiples fuentes
+- ✅ Mantener coherencia en el análisis
+- ✅ Extensibilidad: agregar nuevas fuentes fácilmente
+
+**Implementación:**
+```python
+@dataclass
+class StandardizedPriceData:
+    symbol: str
+    date: pd.DatetimeIndex
+    open: pd.Series
+    high: pd.Series
+    low: pd.Series
+    close: pd.Series
+    volume: pd.Series
+    source: str  # Identifica la fuente original
+```
+
+### 3. ¿Cómo funcionan los métodos estadísticos automáticos?
+
+**Respuesta:** Los métodos estadísticos básicos (media y desviación típica) se calculan **automáticamente** al crear un objeto `PriceSeries` mediante el método `__post_init__()`.
+
+**Implementación:**
+```python
+@dataclass
+class PriceSeries:
+    # Atributos calculados automáticamente
+    mean_price: Optional[float] = field(init=False, default=None)
+    std_price: Optional[float] = field(init=False, default=None)
+    
+    def __post_init__(self):
+        """Calcula automáticamente media y desviación típica"""
+        self._calculate_basic_stats()
+    
+    def _calculate_basic_stats(self):
+        """Calcula estadísticas básicas automáticamente"""
+        self.mean_price = float(self.close.mean())
+        self.std_price = float(self.close.std())
+```
+
+**Uso:**
+```python
+ps = PriceSeries.from_standardized_data(data)
+# mean_price y std_price ya están calculados automáticamente
+print(ps.mean_price)  # Disponible inmediatamente
+print(ps.std_price)   # Disponible inmediatamente
+```
+
+### 4. ¿Cómo funciona la simulación de Monte Carlo?
+
+**Respuesta:** La simulación de Monte Carlo:
+
+1. **Analiza los retornos históricos** de cada activo
+2. **Calcula estadísticas** (media, desviación estándar, correlaciones)
+3. **Genera miles de escenarios aleatorios** posibles usando distribuciones normales multivariadas
+4. **Proyecta la evolución futura** día a día (o mes a mes) basada en estadísticas históricas
+5. **Proporciona intervalos de confianza** (ej: "con 90% de probabilidad, el valor estará entre X e Y")
+
+**Parámetros configurables:**
+- `years`: Años a simular
+- `simulations`: Número de simulaciones (más = más precisión)
+- `initial_value`: Valor inicial del portfolio
+- `random_seed`: Para reproducibilidad
+- `rebalance`: Si reequilibrar periódicamente
+- `rebalance_frequency`: Frecuencia de reequilibrio (monthly, quarterly, yearly)
+- `inflation_rate`: Tasa de inflación para ajustar retornos
+
+**Disponible para:**
+- Portfolio completo: `portfolio.monte_carlo_simulation()`
+- Activos individuales: `portfolio.monte_carlo_individual_assets()`
+
+### 5. ¿Debería el programa aceptar cualquier tipo de input siempre que exista una serie temporal de precios?
+
+**Respuesta:** Sí. El programa acepta múltiples formatos de entrada mediante la clase `DataCleaner`:
+
+- ✅ DataFrames de pandas (cualquier formato de columnas)
+- ✅ Archivos CSV
+- ✅ Diccionarios
+- ✅ Listas de tuplas
+- ✅ Cualquier formato con serie temporal de precios
+
+**Implementación:**
+```python
+class DataCleaner:
+    def create_price_series_from_data(
+        self,
+        data: Union[pd.DataFrame, dict, list],
+        symbol: str,
+        source: str,
+        clean: bool = True
+    ) -> PriceSeries:
+        """
+        Acepta cualquier formato de entrada y lo convierte a PriceSeries
+        """
+        # Detecta formato automáticamente
+        # Normaliza a formato estándar
+        # Limpia datos (duplicados, outliers, valores faltantes)
+        # Valida coherencia
+        # Retorna PriceSeries
+```
 
 ---
 
@@ -355,16 +573,11 @@ ps = cleaner.create_price_series_from_data(
 from src.data_extractor import DataExtractor
 from src.price_series import PriceSeries
 
-# Crear extractor
 extractor = DataExtractor()
-
-# Descargar datos de Apple
 data = extractor.download_historical_prices("AAPL", period="1y")
-
-# Crear serie de precios
 apple = PriceSeries.from_standardized_data(data)
 
-# Ver estadísticas
+# Estadísticas automáticas
 stats = apple.get_summary_stats()
 for key, value in stats.items():
     print(f"{key}: {value}")
@@ -378,22 +591,18 @@ from src.price_series import PriceSeries
 from src.portfolio import Portfolio
 
 extractor = DataExtractor()
-
-# Descargar datos
 symbols = ["AAPL", "MSFT", "GOOGL", "AMZN"]
 data_dict = extractor.download_multiple_series(symbols, period="2y")
 
-# Crear series
 price_series = [
     PriceSeries.from_standardized_data(data_dict[sym])
     for sym in symbols
 ]
 
-# Crear portfolio (pesos personalizados)
 portfolio = Portfolio(
     symbols=symbols,
     price_series=price_series,
-    weights=[0.3, 0.25, 0.25, 0.2]  # 30%, 25%, 25%, 20%
+    weights=[0.3, 0.25, 0.25, 0.2]
 )
 
 # Análisis completo
@@ -406,25 +615,24 @@ portfolio.plots_report()
 ```python
 from src.portfolio import Portfolio
 
-# Portfolio ya creado
-portfolio = ...
+portfolio = ...  # Portfolio ya creado
 
-# Simulación a 2 años
-mc_2y = portfolio.monte_carlo_simulation(
-    days=504,           # 2 años (252 días/año * 2)
-    simulations=5000,  # Más simulaciones = más precisión
-    random_seed=123
+# Simulación a 10 años con 10,000 simulaciones
+mc_results = portfolio.monte_carlo_simulation(
+    years=10,
+    simulations=10000,
+    initial_value=10000,
+    random_seed=123,
+    rebalance=True,
+    rebalance_frequency='monthly',
+    inflation_rate=0.025
 )
 
 # Visualizar
-portfolio.plot_monte_carlo_results(
-    mc_2y,
-    title="Proyección 2 Años - Portfolio",
-    show_confidence_intervals=True
-)
+portfolio.plot_monte_carlo_results(mc_results)
 
 # Estadísticas
-final_values = mc_2y.iloc[:, -1]
+final_values = mc_results.iloc[-1]
 print(f"Valor esperado: ${final_values.mean():.2f}")
 print(f"Percentil 5%: ${final_values.quantile(0.05):.2f}")
 print(f"Percentil 95%: ${final_values.quantile(0.95):.2f}")
@@ -436,10 +644,7 @@ print(f"Percentil 95%: ${final_values.quantile(0.95):.2f}")
 import pandas as pd
 from src.data_cleaning import DataCleaner
 
-# Leer CSV personalizado
 df = pd.read_csv("mis_precios.csv")
-
-# Crear PriceSeries
 cleaner = DataCleaner()
 ps = cleaner.create_price_series_from_data(
     data=df,
@@ -460,11 +665,6 @@ stats = ps.get_summary_stats()
 
 **Solución:**
 ```bash
-pip install yfinance
-```
-
-O reinstala todas las dependencias:
-```bash
 pip install -r requirements.txt
 ```
 
@@ -473,7 +673,7 @@ pip install -r requirements.txt
 **Posibles causas:**
 - El símbolo no existe o está mal escrito
 - Problemas de conexión a Internet
-- La API de Yahoo Finance está temporalmente no disponible
+- La API está temporalmente no disponible
 
 **Solución:**
 - Verifica que el símbolo sea correcto (ej: "AAPL", no "APPLE")
@@ -498,53 +698,19 @@ pip install --upgrade matplotlib seaborn
 - Reduce el número de simulaciones (500 en lugar de 1000)
 - El extractor tiene cache automático
 
-### Problemas con caracteres especiales en Windows
-
-**Solución:**
-- Asegúrate de usar `encoding="utf-8"` al guardar archivos
-- El código ya incluye esto por defecto
-
 ---
 
-## 📝 Notas Importantes
+## 📄 Notas Importantes
 
 1. **Formato Estandarizado**: Todos los extractores devuelven objetos `StandardizedPriceData`, garantizando compatibilidad independientemente de la fuente.
 
 2. **Cálculos Automáticos**: Las estadísticas básicas (media, desviación) se calculan automáticamente al crear un `PriceSeries`.
 
-3. **Monte Carlo Configurable**: La simulación acepta parámetros para días, número de simulaciones y valor inicial.
+3. **Monte Carlo Configurable**: La simulación acepta parámetros para años, número de simulaciones, valor inicial, reequilibrio e inflación.
 
 4. **Reportes en Markdown**: Los reportes se generan en formato Markdown y pueden visualizarse en GitHub directamente.
 
 5. **Visualizaciones**: Los gráficos se guardan automáticamente en alta resolución (300 DPI).
-
----
-
-## 🎓 Conceptos Clave del Proyecto
-
-### ¿Qué es una Portfolio?
-
-Una cartera es una **colección de series de precios con pesos asociados**. Por ejemplo:
-- 40% Apple (AAPL)
-- 30% Microsoft (MSFT)
-- 30% Google (GOOGL)
-
-El portfolio permite analizar el comportamiento conjunto de múltiples activos.
-
-### ¿Por qué Estandarizar el Formato?
-
-Diferentes APIs devuelven datos en formatos diferentes. Al estandarizar, el resto del código funciona igual independientemente de la fuente, facilitando:
-- Cambiar de fuente sin modificar código
-- Combinar datos de múltiples fuentes
-- Mantener coherencia en el análisis
-
-### ¿Cómo Funciona Monte Carlo?
-
-La simulación de Monte Carlo:
-1. Analiza los retornos históricos
-2. Genera miles de escenarios aleatorios posibles
-3. Proyecta la evolución futura basada en estadísticas históricas
-4. Proporciona intervalos de confianza (ej: "con 90% de probabilidad, el valor estará entre X e Y")
 
 ---
 
@@ -564,23 +730,4 @@ Este proyecto es para uso educativo/académico.
 
 ---
 
----
-
-## 🧪 Verificación de Instalación
-
-Antes de ejecutar el programa, puedes verificar que todo esté correctamente instalado:
-
-```bash
-python verificar_instalacion.py
-```
-
-Este script verificará:
-- ✅ Versión de Python
-- ✅ Dependencias instaladas
-- ✅ Módulos del proyecto
-- ✅ Prueba rápida de funcionamiento
-
----
-
 **¡Éxito con tu proyecto! 🚀**
-
