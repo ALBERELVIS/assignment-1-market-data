@@ -5,7 +5,7 @@ Permite al usuario extraer datos de forma interactiva desde cualquier API
 
 import sys
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 
 # Agregar el directorio raíz al path para importar install_dependencies
@@ -61,6 +61,7 @@ def menu_principal():
     print("  8. Análisis completo (extraer datos + crear portfolio + reporte)")
     print("  9. Ver fuentes de datos disponibles")
     print("  10. Crear cartera personalizada (acciones e índices) + simulación Monte Carlo")
+    print("  11. Indicadores macroeconómicos (FRED: inflación, desempleo, PIB, etc.)")
     print("  0. Salir")
     
     choice = input("\nOpción: ").strip()
@@ -670,6 +671,237 @@ def ver_fuentes_disponibles(extractor: DataExtractor):
     print("   Ver: GUIA_APIS_PERSONALIZADAS.md")
 
 
+def ver_indicadores_macroeconomicos(extractor: DataExtractor):
+    """Muestra indicadores macroeconómicos relevantes usando FRED"""
+    print_header("INDICADORES MACROECONÓMICOS (FRED)")
+    
+    # Verificar si FRED está disponible
+    sources = extractor.get_supported_sources()
+    if "fred" not in sources:
+        print("\n⚠️  FRED no está disponible.")
+        print("   Para usar esta función, necesitas configurar FRED_API_KEY en config.json")
+        print("   Obtén una API key gratuita en: https://fred.stlouisfed.org/docs/api/api_key.html")
+        return
+    
+    # Definir indicadores macroeconómicos relevantes
+    indicadores = {
+        "Inflación (CPI)": {
+            "id": "CPIAUCSL",
+            "descripcion": "Consumer Price Index - Índice de Precios al Consumidor",
+            "unidad": "Índice (1982-84=100)"
+        },
+        "Tasa de Desempleo": {
+            "id": "UNRATE",
+            "descripcion": "Unemployment Rate - Tasa de desempleo",
+            "unidad": "Porcentaje"
+        },
+        "PIB (Producto Interno Bruto)": {
+            "id": "GDP",
+            "descripcion": "Gross Domestic Product - Producto Interno Bruto",
+            "unidad": "Billones de USD"
+        },
+        "Tasa de Interés (Fed Funds)": {
+            "id": "FEDFUNDS",
+            "descripcion": "Effective Federal Funds Rate - Tasa de interés de la Fed",
+            "unidad": "Porcentaje anual"
+        },
+        "Producción Industrial": {
+            "id": "INDPRO",
+            "descripcion": "Industrial Production Index - Índice de producción industrial",
+            "unidad": "Índice (2017=100)"
+        },
+        "Ventas al Por Menor": {
+            "id": "RETAILSMNSA",
+            "descripcion": "Retail Sales: Total (Excluding Food Services) - Ventas al por menor",
+            "unidad": "Millones de USD"
+        },
+        "Confianza del Consumidor": {
+            "id": "UMCSENT",
+            "descripcion": "University of Michigan Consumer Sentiment - Confianza del consumidor",
+            "unidad": "Índice (1966:Q1=100)"
+        },
+        "Déficit/Superávit Presupuestario": {
+            "id": "FYFSD",
+            "descripcion": "Federal Surplus or Deficit - Déficit o superávit federal",
+            "unidad": "Millones de USD"
+        },
+        "Balance Comercial": {
+            "id": "BOPGSTB",
+            "descripcion": "Trade Balance: Goods and Services - Balance comercial",
+            "unidad": "Millones de USD"
+        },
+        "Viviendas Iniciadas": {
+            "id": "HOUST",
+            "descripcion": "Housing Starts - Viviendas iniciadas",
+            "unidad": "Miles de unidades"
+        }
+    }
+    
+    print("\n📊 Indicadores macroeconómicos disponibles:")
+    print("   Estos datos provienen de FRED (Federal Reserve Economic Data)")
+    print("   y representan los indicadores económicos más relevantes de EE.UU.\n")
+    
+    # Preguntar período
+    print("¿Qué período quieres consultar?")
+    print("  1. Último año (por defecto)")
+    print("  2. Últimos 5 años")
+    print("  3. Últimos 10 años")
+    print("  4. Especificar fechas personalizadas")
+    
+    periodo_choice = input("\nOpción (Enter para último año): ").strip()
+    
+    end_date = datetime.now().strftime("%Y-%m-%d")
+    
+    if periodo_choice == "2":
+        start_date = (datetime.now() - timedelta(days=5*365)).strftime("%Y-%m-%d")
+        periodo_desc = "últimos 5 años"
+    elif periodo_choice == "3":
+        start_date = (datetime.now() - timedelta(days=10*365)).strftime("%Y-%m-%d")
+        periodo_desc = "últimos 10 años"
+    elif periodo_choice == "4":
+        start_date = input("Fecha inicio (YYYY-MM-DD): ").strip()
+        end_date = input("Fecha fin (YYYY-MM-DD, Enter para hoy): ").strip()
+        if not end_date:
+            end_date = datetime.now().strftime("%Y-%m-%d")
+        periodo_desc = f"{start_date} a {end_date}"
+    else:
+        start_date = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
+        periodo_desc = "último año"
+    
+    print(f"\n📥 Obteniendo indicadores macroeconómicos ({periodo_desc})...")
+    print("   Esto puede tomar unos momentos...\n")
+    
+    resultados = {}
+    errores = []
+    
+    # Obtener datos para cada indicador
+    for nombre, info in indicadores.items():
+        try:
+            print(f"   📊 Obteniendo {nombre}...", end=" ")
+            data = extractor.download_historical_prices(
+                symbol=info["id"],
+                start_date=start_date,
+                end_date=end_date,
+                source="fred"
+            )
+            
+            if data and len(data) > 0:
+                # Obtener último valor y estadísticas
+                # data.close es una Series, data.date es un DatetimeIndex
+                ultimo_valor = data.close.iloc[-1] if hasattr(data.close, 'iloc') else data.close.values[-1]
+                valor_anterior = data.close.iloc[-2] if len(data) > 1 and hasattr(data.close, 'iloc') else (data.close.values[-2] if len(data) > 1 else ultimo_valor)
+                cambio = ultimo_valor - valor_anterior
+                cambio_pct = (cambio / valor_anterior * 100) if valor_anterior != 0 else 0
+                
+                # Obtener información de la serie
+                serie_info = extractor.get_company_info(info["id"], source="fred")
+                
+                # data.date es un DatetimeIndex, usar indexación directa
+                fecha_ultima = data.date[-1] if len(data.date) > 0 else None
+                
+                resultados[nombre] = {
+                    "data": data,
+                    "ultimo_valor": ultimo_valor,
+                    "valor_anterior": valor_anterior,
+                    "cambio": cambio,
+                    "cambio_pct": cambio_pct,
+                    "fecha_ultimo": fecha_ultima,
+                    "info": info,
+                    "serie_info": serie_info
+                }
+                print("✓")
+            else:
+                errores.append(f"{nombre}: No se encontraron datos")
+                print("✗")
+        except Exception as e:
+            errores.append(f"{nombre}: {str(e)}")
+            print("✗")
+    
+    # Mostrar resultados
+    print("\n" + "=" * 80)
+    print("RESUMEN DE INDICADORES MACROECONÓMICOS")
+    print("=" * 80)
+    
+    if resultados:
+        print(f"\n📅 Período: {periodo_desc}")
+        print(f"📊 {len(resultados)} indicadores obtenidos exitosamente\n")
+        
+        # Agrupar por categoría
+        categorias = {
+            "Inflación y Precios": ["Inflación (CPI)"],
+            "Mercado Laboral": ["Tasa de Desempleo"],
+            "Producción y Crecimiento": ["PIB (Producto Interno Bruto)", "Producción Industrial"],
+            "Política Monetaria": ["Tasa de Interés (Fed Funds)"],
+            "Consumo": ["Ventas al Por Menor", "Confianza del Consumidor"],
+            "Sector Inmobiliario": ["Viviendas Iniciadas"],
+            "Finanzas Públicas": ["Déficit/Superávit Presupuestario", "Balance Comercial"]
+        }
+        
+        for categoria, indicadores_cat in categorias.items():
+            print(f"\n{'─' * 80}")
+            print(f"📌 {categoria}")
+            print(f"{'─' * 80}")
+            
+            for nombre in indicadores_cat:
+                if nombre in resultados:
+                    res = resultados[nombre]
+                    fecha_str = res["fecha_ultimo"]
+                    if hasattr(fecha_str, 'strftime'):
+                        fecha_display = fecha_str.strftime("%Y-%m-%d")
+                    else:
+                        fecha_display = str(fecha_str)
+                    
+                    print(f"\n   {nombre}")
+                    print(f"   └─ Descripción: {res['info']['descripcion']}")
+                    print(f"   └─ Unidad: {res['info']['unidad']}")
+                    print(f"   └─ Último valor ({fecha_display}): {res['ultimo_valor']:,.2f}")
+                    
+                    if res['cambio'] != 0:
+                        cambio_signo = "+" if res['cambio'] > 0 else ""
+                        print(f"   └─ Cambio: {cambio_signo}{res['cambio']:,.2f} ({cambio_signo}{res['cambio_pct']:.2f}%)")
+                    
+                    # Mostrar estadísticas básicas
+                    if len(res['data']) > 0:
+                        ps = PriceSeries.from_standardized_data(res['data'])
+                        print(f"   └─ Media del período: {ps.mean_price:,.2f}")
+                        print(f"   └─ Desviación estándar: {ps.std_price:,.2f}")
+                        print(f"   └─ Días de datos: {len(res['data'])}")
+        
+        # Mostrar tabla resumen
+        print(f"\n{'─' * 80}")
+        print("📊 TABLA RESUMEN")
+        print(f"{'─' * 80}")
+        print(f"{'Indicador':<40} {'Último Valor':<20} {'Cambio %':<15}")
+        print(f"{'─' * 80}")
+        
+        for nombre, res in resultados.items():
+            fecha_str = res["fecha_ultimo"]
+            if hasattr(fecha_str, 'strftime'):
+                fecha_display = fecha_str.strftime("%Y-%m-%d")
+            else:
+                fecha_display = str(fecha_str)
+            
+            cambio_pct_str = f"{res['cambio_pct']:+.2f}%" if res['cambio_pct'] != 0 else "N/A"
+            print(f"{nombre:<40} {res['ultimo_valor']:>15,.2f} ({fecha_display}) {cambio_pct_str:>15}")
+        
+    else:
+        print("\n⚠️  No se pudieron obtener indicadores.")
+    
+    if errores:
+        print(f"\n⚠️  Errores encontrados ({len(errores)}):")
+        for error in errores[:5]:  # Mostrar solo primeros 5
+            print(f"   - {error}")
+        if len(errores) > 5:
+            print(f"   ... y {len(errores) - 5} más")
+    
+    print(f"\n{'─' * 80}")
+    print("💡 Nota: Los datos provienen de FRED (Federal Reserve Economic Data)")
+    print("   Para más información, visita: https://fred.stlouisfed.org/")
+    print(f"{'─' * 80}\n")
+    
+    return resultados
+
+
 def crear_cartera_personalizada(extractor: DataExtractor):
     """Crea una cartera personalizada con acciones e índices y permite simulación Monte Carlo"""
     print_header("CREAR CARTERA PERSONALIZADA")
@@ -1027,6 +1259,8 @@ def main():
             ver_fuentes_disponibles(extractor)
         elif choice == "10":
             crear_cartera_personalizada(extractor)
+        elif choice == "11":
+            ver_indicadores_macroeconomicos(extractor)
         else:
             print("\n⚠️  Opción no válida. Intenta de nuevo.")
         

@@ -730,7 +730,14 @@ class DataExtractor:
     Ahora soporta cualquier API mediante adaptadores.
     """
     
-    def __init__(self):
+    def __init__(self, auto_load_adapters: bool = True):
+        """
+        Inicializa el extractor de datos
+        
+        Args:
+            auto_load_adapters: Si True, carga automáticamente los adaptadores disponibles
+                               (FRED, Stooq, Alpha Vantage)
+        """
         # Adaptadores predefinidos
         self._adapters: Dict[str, APISourceAdapter] = {
             'yahoo': YahooFinanceAdapter()
@@ -738,6 +745,47 @@ class DataExtractor:
         self.cache = {}  # Cache para datos descargados
         self._cache_recommendations = {}  # Cache para recomendaciones
         self._cache_news = {}  # Cache para noticias
+        
+        # Cargar adaptadores adicionales automáticamente
+        if auto_load_adapters:
+            self._load_additional_adapters()
+    
+    def _load_additional_adapters(self):
+        """Carga automáticamente los adaptadores adicionales disponibles"""
+        try:
+            from .api_adapters import FREDAdapter, StooqAdapter, AlphaVantageAdapter
+            
+            # Cargar Stooq (no requiere API key)
+            try:
+                self._adapters['stooq'] = StooqAdapter()
+                print("✅ Adaptador 'stooq' cargado exitosamente")
+            except Exception as e:
+                print(f"⚠️  No se pudo cargar adaptador 'stooq': {e}")
+            
+            # Cargar FRED (requiere API key, pero no falla si no está)
+            try:
+                fred_adapter = FREDAdapter()
+                if fred_adapter.api_key:
+                    self._adapters['fred'] = fred_adapter
+                    print("✅ Adaptador 'fred' cargado exitosamente")
+                else:
+                    print("ℹ️  Adaptador 'fred' disponible (requiere API key en config)")
+            except Exception as e:
+                print(f"⚠️  No se pudo cargar adaptador 'fred': {e}")
+            
+            # Cargar Alpha Vantage (requiere API key, pero no falla si no está)
+            try:
+                av_adapter = AlphaVantageAdapter()
+                if av_adapter.api_key:
+                    self._adapters['alpha_vantage'] = av_adapter
+                    print("✅ Adaptador 'alpha_vantage' cargado exitosamente")
+                else:
+                    print("ℹ️  Adaptador 'alpha_vantage' disponible (requiere API key en config)")
+            except Exception as e:
+                print(f"⚠️  No se pudo cargar adaptador 'alpha_vantage': {e}")
+                
+        except ImportError as e:
+            print(f"⚠️  No se pudieron cargar adaptadores adicionales: {e}")
     
     def register_adapter(self, source_name: str, adapter: APISourceAdapter):
         """

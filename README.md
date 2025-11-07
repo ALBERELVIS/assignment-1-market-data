@@ -20,7 +20,7 @@ Sistema completo de herramientas para la obtención y análisis de información 
 
 Este proyecto implementa un sistema modular para:
 
-- **Extracción de datos**: Descarga de información histórica de precios desde múltiples fuentes (APIs)
+- **Extracción de datos**: Descarga de información histórica de precios desde múltiples fuentes (Yahoo Finance, FRED, Stooq, Alpha Vantage)
 - **Estandarización**: Formato unificado independientemente de la fuente de datos
 - **Análisis estadístico**: Cálculo automático de métricas (media, desviación, volatilidad, Sharpe, etc.)
 - **Portfolio Management**: Creación y gestión de carteras con múltiples activos
@@ -37,6 +37,8 @@ Este proyecto implementa un sistema modular para:
 ├── src/                          # Código fuente principal
 │   ├── __init__.py              # Inicialización del módulo
 │   ├── data_extractor.py        # Extractor de datos desde APIs
+│   ├── api_adapters.py          # Adaptadores para FRED, Stooq, Alpha Vantage
+│   ├── config_manager.py        # Gestión de API keys y configuración
 │   ├── price_series.py           # DataClass para series de precios
 │   ├── portfolio.py             # Clase Portfolio con métodos de análisis
 │   ├── data_cleaning.py         # Limpieza y preprocesado de datos
@@ -62,6 +64,45 @@ Antes de comenzar, necesitas tener instalado:
    - Necesaria para descargar datos de APIs financieras
 
 3. **Cuenta de GitHub** (ya la tienes según mencionaste)
+
+---
+
+## 🔑 Configuración de API Keys (Opcional)
+
+El sistema soporta múltiples fuentes de datos. Algunas requieren API keys gratuitas:
+
+- **FRED**: Requiere API key (gratis en https://fred.stlouisfed.org/docs/api/api_key.html)
+- **Alpha Vantage**: Requiere API key (gratis en https://www.alphavantage.co/support/#api-key)
+- **Stooq**: No requiere API key
+- **Yahoo Finance**: No requiere API key (fuente por defecto)
+
+### Configurar API Keys
+
+**Opción 1: Archivo de configuración (Recomendado)**
+
+Crea un archivo `config.json` en la raíz del proyecto:
+
+```json
+{
+  "FRED_API_KEY": "tu_fred_api_key_aqui",
+  "ALPHA_VANTAGE_API_KEY": "tu_alpha_vantage_api_key_aqui"
+}
+```
+
+O crea un archivo `.env`:
+
+```
+FRED_API_KEY=tu_fred_api_key_aqui
+ALPHA_VANTAGE_API_KEY=tu_alpha_vantage_api_key_aqui
+```
+
+**Opción 2: Input del usuario**
+
+Si no configuras las API keys, el sistema te pedirá que las ingreses cuando las necesites.
+
+**Nota:** Los archivos de configuración están en `.gitignore` para proteger tus API keys.
+
+Para más información, consulta `GUIA_NUEVAS_FUENTES.md`.
 
 ---
 
@@ -180,10 +221,11 @@ Puedes crear tus propios scripts. Mira `example_usage.py` para más ejemplos.
 
 **Funcionalidades:**
 - Descarga de datos históricos de acciones e índices
-- Soporte para múltiples fuentes (Yahoo Finance, extensible)
+- Soporte para múltiples fuentes: **Yahoo Finance**, **FRED**, **Stooq**, **Alpha Vantage**
 - Formato estandarizado independiente de la fuente
 - Descarga de múltiples series simultáneamente
 - Cache para evitar llamadas repetidas
+- Gestión automática de API keys (archivo de config o input del usuario)
 
 **Ejemplo:**
 ```python
