@@ -1,5 +1,5 @@
 ═══════════════════════════════════════════════════════════════════════════
-                    ENTREGA DEL PROYECTO
+                    ENTREGA DEL PROYECTO MIAX BLOQUE 1
 ═══════════════════════════════════════════════════════════════════════════
 
 Link al repositorio de GitHub:
@@ -7,5 +7,6 @@ Link al repositorio de GitHub:
 https://github.com/ALBERELVIS/assignment-1-market-data.git
 
 ═══════════════════════════════════════════════════════════════════════════
+
 
 
