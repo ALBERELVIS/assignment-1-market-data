@@ -414,7 +414,7 @@ mc_results = portfolio.monte_carlo_simulation(
 
 ### 1. ¿Qué es una cartera?
 
-**Respuesta:** Una cartera (Portfolio) es una **colección de series de precios con pesos asociados**. Cada serie de precios representa un activo (acción o índice), y cada activo tiene un peso que indica qué porcentaje del portfolio representa.
+**Respuesta:** Una cartera (Portfolio) es una **colección de series de precios con pesos asociados**. Cada serie de precios representa un activo (acción o índice), y cada activo tiene un peso que indica qué porcentaje del portfolio representa. (En el ámbito de la programacion se trata de un DataClass con pesos relativos al 100% de la totalidad de la clase)
 
 **Ejemplo:**
 - 40% Apple (AAPL)
@@ -515,13 +515,15 @@ print(ps.std_price)   # Disponible inmediatamente
 
 ### 5. ¿Debería el programa aceptar cualquier tipo de input siempre que exista una serie temporal de precios?
 
-**Respuesta:** Sí. El programa acepta múltiples formatos de entrada mediante la clase `DataCleaner`:
+**Respuesta:** Sí y No. El programa acepta múltiples formatos de entrada mediante la clase `DataCleaner`:
 
 - ✅ DataFrames de pandas (cualquier formato de columnas)
 - ✅ Archivos CSV
 - ✅ Diccionarios
 - ✅ Listas de tuplas
 - ✅ Cualquier formato con serie temporal de precios
+
+- Pero a veces las APIs dan datos que son de uso interno, y no estan pensadas para que el individuo las use.
 
 **Implementación:**
 ```python
@@ -713,4 +715,5 @@ Este proyecto es para uso educativo/académico.
 ---
 
 **¡Éxito con tu proyecto! 🚀**
+
 
