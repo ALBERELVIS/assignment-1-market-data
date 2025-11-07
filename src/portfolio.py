@@ -816,7 +816,7 @@ class Portfolio:
                                rebalance_frequency: str = 'monthly',
                                inflation_rate: Optional[float] = None) -> pd.DataFrame:
         """
-        Simulación Monte Carlo estilo Portfolio Visualizer
+        Simulación Monte Carlo
         Usa movimiento geométrico Browniano con correlación entre activos y reequilibrio opcional.
         
         Args:
@@ -1682,7 +1682,7 @@ class Portfolio:
     def plot_monte_carlo_portfolio_visualizer(self,
                                              simulation_df: pd.DataFrame,
                                              initial_value: float,
-                                             title: str = "Monte Carlo Simulation - Portfolio Visualizer Style",
+                                             title: str = "Monte Carlo Simulation",
                                              save_path: Optional[str] = None) -> None:
         """
         Visualización estilo Portfolio Visualizer con fan chart y estadísticas detalladas
@@ -1802,38 +1802,32 @@ class Portfolio:
         }
         
         stats_text = []
-        stats_text.append("ESTADÍSTICAS DE SIMULACIÓN")
-        stats_text.append("=" * 50)
-        stats_text.append(f"Simulaciones: {sim_df.shape[1]:,}")
-        stats_text.append(f"Período: {years:.0f} años ({months:.0f} meses)")
+        stats_text.append("ESTADÍSTICAS")
+        stats_text.append("=" * 35)
+        stats_text.append(f"Sims: {sim_df.shape[1]:,} | {years:.0f}a")
         stats_text.append("")
         stats_text.append("VALORES FINALES:")
-        stats_text.append(f"  Media:      ${np.mean(final_values):>12,.2f}")
-        stats_text.append(f"  Mediana:    ${np.median(final_values):>12,.2f}")
-        stats_text.append(f"  Mínimo:     ${np.min(final_values):>12,.2f}")
-        stats_text.append(f"  Máximo:     ${np.max(final_values):>12,.2f}")
+        stats_text.append(f"  Media:   ${np.mean(final_values):>10,.0f}")
+        stats_text.append(f"  Mediana: ${np.median(final_values):>10,.0f}")
+        stats_text.append(f"  Min/Max: ${np.min(final_values):>8,.0f} / ${np.max(final_values):>8,.0f}")
         stats_text.append("")
         stats_text.append("PERCENTILES:")
-        stats_text.append(f"  P5:         ${percentiles['p5']:>12,.2f}")
-        stats_text.append(f"  P10:        ${percentiles['p10']:>12,.2f}")
-        stats_text.append(f"  P25:        ${percentiles['p25']:>12,.2f}")
-        stats_text.append(f"  P50:        ${percentiles['p50']:>12,.2f}")
-        stats_text.append(f"  P75:        ${percentiles['p75']:>12,.2f}")
-        stats_text.append(f"  P90:        ${percentiles['p90']:>12,.2f}")
-        stats_text.append(f"  P95:        ${percentiles['p95']:>12,.2f}")
+        stats_text.append(f"  P5:  ${percentiles['p5']:>10,.0f}")
+        stats_text.append(f"  P50: ${percentiles['p50']:>10,.0f}")
+        stats_text.append(f"  P95: ${percentiles['p95']:>10,.0f}")
         stats_text.append("")
-        stats_text.append("RETORNOS ESPERADOS:")
-        stats_text.append(f"  Media:      {returns.mean()*100:>12.2f}%")
-        stats_text.append(f"  Mediana:    {return_percentiles['p50']:>12.2f}%")
+        stats_text.append("RETORNOS:")
+        stats_text.append(f"  Media:   {returns.mean()*100:>7.1f}%")
+        stats_text.append(f"  Mediana: {return_percentiles['p50']:>7.1f}%")
         stats_text.append("")
         stats_text.append("PROBABILIDADES:")
-        stats_text.append(f"  Ganancia:   {prob_gain*100:>12.1f}%")
-        stats_text.append(f"  Pérdida:    {prob_loss*100:>12.1f}%")
+        stats_text.append(f"  Ganancia: {prob_gain*100:>6.1f}%")
+        stats_text.append(f"  Pérdida:  {prob_loss*100:>6.1f}%")
         
         stats_str = "\n".join(stats_text)
-        ax3.text(0.05, 0.95, stats_str, fontsize=10, family='monospace',
-                verticalalignment='top', transform=ax3.transAxes,
-                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8, pad=10))
+        ax3.text(0.98, 0.98, stats_str, fontsize=7, family='monospace',
+                verticalalignment='top', horizontalalignment='right', transform=ax3.transAxes,
+                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.85, pad=5, linewidth=1))
         
         plt.tight_layout()
         
@@ -2151,7 +2145,7 @@ class Portfolio:
                                  save_path: Optional[str] = None,
                                  **kwargs) -> pd.DataFrame:
         """
-        Método auxiliar: ejecuta simulación y visualiza en un solo paso (estilo Portfolio Visualizer)
+        Método auxiliar: ejecuta simulación y visualiza en un solo paso
         
         Args:
             years: Años a simular (por defecto 10)
@@ -2177,7 +2171,7 @@ class Portfolio:
             **kwargs
         )
         
-        # Usar la nueva visualización estilo Portfolio Visualizer
+        # Usar la nueva visualización
         if save_path is None:
             save_path = "plots/monte_carlo_portfolio.png"
         self.plot_monte_carlo_portfolio_visualizer(
@@ -2308,7 +2302,7 @@ class Portfolio:
                                                    save_path: Optional[str] = None) -> None:
         """
         Visualiza los resultados de simulaciones Monte Carlo de activos individuales mejorado
-        Estilo Portfolio Visualizer
+        
         
         Args:
             simulation_dict: Diccionario con símbolos como clave y DataFrames de simulaciones como valor

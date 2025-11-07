@@ -32,12 +32,14 @@ try:
     from .price_series import PriceSeries
     from .portfolio import Portfolio
     from .data_cleaning import DataCleaner
+    from .price_plots import plot_price_series_from_standardized, plot_multiple_series_from_dict
 except ImportError:
     # Fallback a importación absoluta (cuando se ejecuta directamente)
     from data_extractor import DataExtractor, StandardizedPriceData, Recommendation, NewsItem
     from price_series import PriceSeries
     from portfolio import Portfolio
     from data_cleaning import DataCleaner
+    from price_plots import plot_price_series_from_standardized, plot_multiple_series_from_dict
 
 
 def print_header(title: str):
@@ -58,10 +60,9 @@ def menu_principal():
     print("  5. Noticias financieras")
     print("  6. Información de empresa")
     print("  7. Todos los datos disponibles (precios + noticias + recomendaciones + info)")
-    print("  8. Análisis completo (extraer datos + crear portfolio + reporte)")
-    print("  9. Ver fuentes de datos disponibles")
-    print("  10. Crear cartera personalizada (acciones e índices) + simulación Monte Carlo")
-    print("  11. Indicadores macroeconómicos (FRED: inflación, desempleo, PIB, etc.)")
+    print("  8. Crear cartera personalizada (acciones e índices) + simulación Monte Carlo")
+    print("  9. Indicadores macroeconómicos (FRED: inflación, desempleo, PIB, etc.)")
+    print("  10. Ver fuentes de datos disponibles")
     print("  0. Salir")
     
     choice = input("\nOpción: ").strip()
@@ -186,6 +187,18 @@ def extraer_precios_acciones(extractor: DataExtractor):
         print(f"\n✓ FORMATO ESTANDARIZADO: Los datos están en formato StandardizedPriceData")
         print(f"  independientemente de la fuente '{source}'")
         
+        # Generar gráfico de evolución de precios
+        print(f"\n📈 Generando gráfico de evolución de precios...")
+        try:
+            plot_path = plot_price_series_from_standardized(
+                data,
+                save_dir="plots",
+                filename=f"{data.symbol}_price_evolution.png",
+                show_plot=False
+            )
+        except Exception as e:
+            print(f"   ⚠️  Error generando gráfico: {e}")
+        
         return data
     except Exception as e:
         print(f"\n❌ Error: {e}")
@@ -230,6 +243,19 @@ def extraer_precios_indices(extractor: DataExtractor):
         print(f"\n📊 Estadísticas automáticas:")
         print(f"   - Precio medio: ${ps.mean_price:.2f}")
         print(f"   - Desviación típica: ${ps.std_price:.2f}")
+        print(f"   - Volatilidad anualizada: {ps.volatility(annualized=True)*100:.2f}%")
+        
+        # Generar gráfico de evolución de precios
+        print(f"\n📈 Generando gráfico de evolución de precios...")
+        try:
+            plot_path = plot_price_series_from_standardized(
+                data,
+                save_dir="plots",
+                filename=f"{data.symbol}_index_evolution.png",
+                show_plot=False
+            )
+        except Exception as e:
+            print(f"   ⚠️  Error generando gráfico: {e}")
         
         return data
     except Exception as e:
@@ -301,6 +327,19 @@ def extraer_multiple_series(extractor: DataExtractor):
         
         print(f"\n✓ TODAS LAS SERIES ESTÁN EN FORMATO ESTANDARIZADO")
         print(f"  independientemente de la fuente '{source}'")
+        
+        # Generar gráfico comparativo de evolución de precios
+        print(f"\n📈 Generando gráfico comparativo de evolución de precios...")
+        try:
+            plot_path = plot_multiple_series_from_dict(
+                data_dict,
+                save_dir="plots",
+                filename="multiple_series_comparison.png",
+                show_plot=False,
+                normalize=False
+            )
+        except Exception as e:
+            print(f"   ⚠️  Error generando gráfico: {e}")
         
         return data_dict, price_series_list
     except Exception as e:
@@ -1254,13 +1293,11 @@ def main():
         elif choice == "7":
             extraer_todos_los_datos(extractor)
         elif choice == "8":
-            analisis_completo(extractor)
-        elif choice == "9":
-            ver_fuentes_disponibles(extractor)
-        elif choice == "10":
             crear_cartera_personalizada(extractor)
-        elif choice == "11":
+        elif choice == "9":
             ver_indicadores_macroeconomicos(extractor)
+        elif choice == "10":
+            ver_fuentes_disponibles(extractor)
         else:
             print("\n⚠️  Opción no válida. Intenta de nuevo.")
         
